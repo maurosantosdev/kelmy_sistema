@@ -1,0 +1,477 @@
+/* --- Tema "Kolor" Chácara Bahamas --- */
+:root {
+    --bg-dark: #2c3e50;
+    --card-bg: #ffffff;
+    --header-bg: #34495e;
+    --primary-text: #2c3e50;
+    --secondary-text: #7f8c8d;
+    --accent-color: #e74c3c;
+    --available-bg: #fef9e7;
+    --unavailable-bg: #ecf0f1;
+    --price-color: #27ae60;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background-color: var(--bg-dark);
+}
+div[data-role="page"] {
+    padding-top: 0 !important;
+    margin-top: 0 !important;
+    background: var(--bg-dark) !important;
+}
+
+/* --- Cabeçalho e Footer (Estáveis) --- */
+.ui-header, .ui-footer { /* ... (código do header e footer) ... */ }
+.ui-header { position: relative !important; height: 50px; box-sizing: border-box; }
+.ui-header h1 { font-weight: 500; font-size: 1.1em !important; position: absolute !important; top: 50% !important; left: 50% !important; transform: translate(-50%, -50%) !important; width: 60%; margin: 0 !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ui-header .ui-btn { background-color: var(--accent-color) !important; color: white !important; text-shadow: none !important; border: none !important; border-radius: 8px !important; position: absolute !important; top: 50% !important; right: 15px !important; transform: translateY(-50%) !important; margin: 0 !important; padding: .5em 1em !important; }
+.ui-footer .ui-navbar li a { background-color: var(--header-bg) !important; color: #bdc3c7 !important; text-shadow: none !important; }
+.ui-footer .ui-navbar li a.ui-btn-active { background-color: var(--bg-dark) !important; color: white !important; }
+
+/* --- Conteúdo Principal e Cards (COM CORREÇÃO DE ALINHAMENTO) --- */
+.ui-content {
+    background-color: var(--bg-dark);
+    /* MUDANÇA: Padding lateral para garantir o espaçamento */
+    padding: 10px 10px !important;
+}
+.card {
+    background-color: var(--card-bg); border-radius: 20px;
+    padding: 20px;
+    /* MUDANÇA: Margem removida para o padding do .ui-content controlar o espaçamento */
+    margin: 0 0 15px 0;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+}
+.card:last-child {
+    margin-bottom: 0; /* Remove a margem do último card */
+}
+.card h2 {
+    color: var(--primary-text); font-size: 1.3em; margin-top: 0;
+    border-bottom: 1px solid #ecf0f1; padding-bottom: 10px; margin-bottom: 10px;
+}
+.card p { color: var(--secondary-text); line-height: 1.5; font-size: 0.9em; }
+
+
+/* ----- SEÇÃO DE ESTILOS DO CALENDÁRIO (COMPACTA E FINAL) ----- */
+#reservaCalendarControls {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 0; margin-bottom: 20px;
+}
+#reservaCalendarControls .ui-btn {
+    background-color: var(--unavailable-bg) !important; border: none !important;
+    color: var(--secondary-text) !important; box-shadow: none !important;
+    text-shadow: none !important; border-radius: 50% !important;
+}
+#reservaCalendarControls h2 { border: none; padding: 0; margin: 0; font-size: 1.2em; }
+
+#reservaCalendar {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 1.8vw;
+}
+@media (min-width: 420px) {
+    #reservaCalendar {
+        gap: 10px;
+    }
+}
+#reservaCalendar .day-header {
+    text-align: center; font-weight: 500;
+    color: var(--secondary-text);
+    padding-bottom: 5px;
+    font-size: clamp(0.65em, 2.2vw, 0.8em);
+}
+#reservaCalendar .calendar-day {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 2px;
+    border-radius: 10px;
+    background-color: var(--unavailable-bg); color: var(--secondary-text);
+    font-weight: 500;
+    aspect-ratio: 1 / 1;
+}
+#reservaCalendar .calendar-day .day-number {
+    font-size: clamp(0.75em, 2.8vw, 0.9em);
+    order: 1;
+}
+#reservaCalendar .calendar-day:empty { background-color: transparent; }
+#reservaCalendar .calendar-day.available {
+    background-color: var(--available-bg); color: var(--primary-text);
+    cursor: pointer; transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+#reservaCalendar .calendar-day.available:hover {
+    transform: translateY(-2px); box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+#reservaCalendar .calendar-day.reserved {
+    background-color: #c0392b !important; /* Vermelho forte para dias reservados */
+    color: white !important;
+    text-decoration: line-through; opacity: 0.8; cursor: not-allowed;
+}
+#reservaCalendar .calendar-day.reserved .price {
+    color: white !important; /* Texto branco para os valores nos dias reservados */
+}
+#reservaCalendar .calendar-day.pending {
+    background-color: #f39c12; color: white; /* Laranja para pendente */
+    opacity: 0.8; cursor: not-allowed;
+}
+#reservaCalendar .calendar-day.available {
+    background-color: #27ae60 !important; /* Verde para dias disponíveis */
+    color: white !important;
+}
+#reservaCalendar .calendar-day.available .price {
+    color: white !important; /* Texto branco para os valores nos dias disponíveis */
+}
+
+/* Estilo para dias selecionados no calendário */
+#reservaCalendar .calendar-day.selected {
+    background-color: #2c3e50 !important; /* Cinza escuro mais intenso para dias selecionados */
+    color: white !important;
+}
+#reservaCalendar .calendar-day.selected .price {
+    color: white !important;
+}
+#reservaCalendar .calendar-day .price {
+    font-size: clamp(0.5em, 1.8vw, 0.6em);
+    color: var(--price-color);
+    margin-top: 2px;
+    font-weight: bold;
+    order: 2;
+    white-space: nowrap;
+}
+
+.calendar-legend {
+    display: flex; justify-content: center; gap: 15px;
+    margin-top: 20px;
+    font-size: 0.75em; color: var(--secondary-text);
+}
+.calendar-legend .dot {
+    display: inline-block; width: 10px; height: 10px;
+    border-radius: 50%; margin-right: 4px; vertical-align: middle;
+}
+.calendar-legend .dot.available { background-color: #27ae60; border: 1px solid #ddd;} /* Verde para disponível */
+.calendar-legend .dot.reserved { background-color: var(--accent-color); }
+.calendar-legend .dot.pending { background-color: #f39c12; } /* Laranja para pendente */
+
+/* (O resto do CSS permanece o mesmo) */
+#reservaForm textarea { width: 100%; min-height: 80px; border-radius: 8px; border: 1px solid #ddd; padding: 10px; box-sizing: border-box; font-family: inherit; font-size: 1em; }
+#confirmReservaBtn { background-color: #27ae60 !important; /* Verde */ color: white !important; text-shadow: none !important; width: 100%; text-align: center; border-radius: 8px !important; margin-top: 15px !important; }
+.swiper-container { width: 100%; height: 250px; border-radius: 15px; overflow: hidden; position: relative; }
+.swiper-slide { display: flex; justify-content: center; align-items: center; background-color: #ecf0f1; }
+.swiper-slide img, .swiper-slide video { width: 100%; height: 100%; object-fit: cover; }
+.swiper-slide video::-webkit-media-controls-panel, .swiper-slide video::-webkit-media-controls { display: none !important; }
+/* Estilos para os botões de navegação do carrossel */
+.swiper-container .swiper-button-prev,
+.swiper-container .swiper-button-next {
+    position: absolute;
+    top: 0;
+    width: 40px !important;
+    height: 100%;
+    background: transparent !important; /* Fundo removido */
+    color: white;
+    border: none;
+    cursor: pointer;
+    z-index: 10;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 16px !important;
+    font-weight: bold;
+    opacity: 0.6 !important;
+    transition: all 0.3s ease;
+    text-align: center;
+    margin: 0;
+    border-radius: 0;
+    min-width: 40px !important;
+    max-width: 40px !important;
+}
+
+.swiper-container .swiper-button-prev:hover,
+.swiper-container .swiper-button-next:hover {
+    background: transparent !important; /* Fundo removido também no hover */
+    opacity: 0.9 !important;
+}
+
+/* Garantir consistência em dispositivos móveis */
+@media screen and (max-width: 768px) {
+    .swiper-container .swiper-button-prev,
+    .swiper-container .swiper-button-next {
+        width: 40px !important;
+        min-width: 40px !important;
+        max-width: 40px !important;
+        font-size: 18px !important;
+    }
+}
+
+@media screen and (max-width: 480px) {
+    .swiper-container .swiper-button-prev,
+    .swiper-container .swiper-button-next {
+        width: 40px !important;
+        min-width: 40px !important;
+        max-width: 40px !important;
+        font-size: 16px !important; /* Um pouco menor em telas muito pequenas */
+    }
+}
+
+@media screen and (max-width: 360px) {
+    .swiper-container .swiper-button-prev,
+    .swiper-container .swiper-button-next {
+        width: 35px !important;
+        min-width: 35px !important;
+        max-width: 35px !important;
+        font-size: 15px !important; /* Ajuste para telas muito pequenas */
+    }
+}
+
+.swiper-container .swiper-button-prev {
+    left: 0;
+    width: 40px !important; /* Mais estreito para mobile */
+}
+
+.swiper-container .swiper-button-next {
+    right: 0;
+    width: 40px !important; /* Mais estreito para mobile */
+}
+
+/* Estilos para os ícones dos botões do Swiper com alta especificidade */
+.swiper-container .swiper-button-prev::after,
+.swiper-container .swiper-button-next::after {
+    font-size: 12px !important; /* Tamanho ainda menor */
+    font-weight: bold !important;
+    color: white !important;
+    text-shadow: 0 0 2px rgba(0,0,0,0.7) !important;
+    opacity: 0.8 !important;
+    position: relative !important;
+    z-index: 11 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+/* Garantir consistência dos ícones em dispositivos móveis */
+@media screen and (max-width: 768px) {
+    .swiper-container .swiper-button-prev::after,
+    .swiper-container .swiper-button-next::after {
+        font-size: 12px !important;
+    }
+}
+
+@media screen and (max-width: 480px) {
+    .swiper-container .swiper-button-prev::after,
+    .swiper-container .swiper-button-next::after {
+        font-size: 12px !important;
+    }
+}
+
+@media screen and (max-width: 360px) {
+    .swiper-container .swiper-button-prev::after,
+    .swiper-container .swiper-button-next::after {
+        font-size: 12px !important;
+    }
+}
+.contact-buttons { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.contact-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 15px 5px; border-radius: 10px; background-color: #ecf0f1; color: var(--primary-text) !important; text-decoration: none !important; font-weight: 500 !important; font-size: 0.9em; transition: background-color 0.2s ease; }
+.contact-btn:hover { background-color: #bdc3c7; }
+.contact-btn i { font-size: 22px; margin-bottom: 8px; color: var(--accent-color); }
+/* --- Estilos para o Popup PIX --- */
+#pixPopup {
+    max-width: 340px;
+    padding: 0;
+    border: none;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+}
+.popup-header {
+    background-color: var(--header-bg);
+    color: white;
+    padding: 10px 15px;
+}
+.popup-header h2 {
+    margin: 0;
+    font-size: 1.2em;
+    font-weight: 500;
+}
+#pixPopup .ui-content {
+    padding: 15px;
+}
+#pixPopup p {
+    margin: 0.5em 0;
+}
+.pix-instructions {
+    font-size: 0.9em;
+    text-align: center;
+    color: var(--secondary-text);
+    margin-top: 15px !important;
+}
+
+/* Container do QR Code */
+#qrcode-container {
+    display: flex;
+    justify-content: center;
+    margin: 15px 0;
+}
+#qrcode {
+    padding: 10px;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+/* Container da Chave PIX */
+.pix-key-container {
+    display: flex;
+    margin-top: 5px;
+}
+#pix-key-text {
+    flex-grow: 1;
+    font-size: 0.8em;
+    background-color: var(--unavailable-bg);
+    border: 1px solid #ddd;
+    border-radius: 6px 0 0 6px;
+    padding: 8px;
+    text-align: center;
+    color: var(--primary-text);
+}
+#copyPixKeyBtn {
+    border: 1px solid #ddd;
+    border-left: none;
+    background-color: #f6f6f6;
+    border-radius: 0 6px 6px 0;
+    padding: 0 12px;
+    cursor: pointer;
+}
+
+/* Botões de Ação do Popup */
+.popup-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+}
+.popup-btn {
+    flex-grow: 1;
+    text-align: center;
+    padding: 12px;
+    border-radius: 8px;
+    color: white !important;
+    text-shadow: none !important;
+    font-weight: bold !important;
+    text-decoration: none !important;
+}
+.confirm-btn {
+    background-color: var(--accent-color) !important;
+}
+.cancel-btn {
+    background-color: var(--secondary-text) !important;
+}
+/* --- Estilos para o Modal de Pagamento PIX --- */
+#pix-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.6);
+    z-index: 1000;
+    display: none; /* Começa oculto */
+    justify-content: center;
+    align-items: center;
+    padding: 15px;
+    box-sizing: border-box;
+}
+
+#pix-modal-content {
+    position: relative;
+    background-color: var(--header-bg);
+    color: white;
+    padding: 25px;
+    max-width: 400px;
+    width: 100%;
+}
+
+#close-pix-modal {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    background-color: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+#pix-modal-content h2 {
+    color: white;
+    text-align: center;
+    border-bottom-color: rgba(255,255,255,0.2);
+}
+
+.pix-details p {
+    color: #bdc3c7;
+    margin: 5px 0;
+}
+.pix-details strong {
+    color: white;
+}
+
+.pix-instructions {
+    text-align: center;
+    color: #bdc3c7;
+    margin: 20px 0 10px 0;
+}
+
+#pix-qrcode {
+    display: flex;
+    justify-content: center;
+    padding: 10px;
+    background-color: white;
+    border-radius: 8px;
+    width: 180px;
+    height: 180px;
+    margin: 0 auto;
+}
+
+.pix-copy-paste {
+    display: flex;
+    margin-top: 10px;
+}
+#pix-key-input {
+    flex-grow: 1;
+    background-color: rgba(255,255,255,0.9);
+    border: none;
+    padding: 10px;
+    border-radius: 8px 0 0 8px;
+    font-size: 0.9em;
+    color: var(--primary-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+#copy-pix-key-btn {
+    padding: 10px 15px;
+    border: none;
+    background-color: #ecf0f1;
+    color: var(--primary-text);
+    border-radius: 0 8px 8px 0;
+    cursor: pointer;
+}
+
+#payment-status-container {
+    margin-top: 25px;
+    text-align: center;
+}
+
+#payment-pending-btn, #payment-success-btn, #cancel-reservation-btn {
+    width: 100%;
+    text-shadow: none !important;
+    border-radius: 8px !important;
+    margin: 10px 0 0 0 !important;
+}
+#payment-pending-btn {
+    background-color: #f39c12 !important; /* Laranja */
+    color: white !important;
+    border: none !important;
+}
+#payment-success-btn {
+    background-color: #27ae60 !important; /* Verde */
+    color: white !important;
+    border: none !important;
+}
+#cancel-reservation-btn {
+    background-color: #95a5a6 !important; /* Cinza */
+    color: white !important;
+    border: none !important;
+}
+

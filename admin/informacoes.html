@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Gerenciar Informações - Chácara Bahamas</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="/chacara_kelmy/assets/css/jquery.mobile-1.4.5.min.css">
+    <link rel="stylesheet" href="https://code.jquery.com/ui/1.12.1/themes/base/jquery-ui.css">
+    <link rel="stylesheet" href="/chacara_kelmy/admin/style.css">
+
+    <style>
+        #image-preview-container .ui-sortable-placeholder {
+            border: 2px dashed #007cba;
+            background: rgba(0, 124, 186, 0.1);
+            height: 100px;
+            visibility: visible !important;
+            margin: 10px 0;
+        }
+        #image-preview-container .image-card {
+            cursor: move;
+            margin: 10px 0;
+            position: relative;
+        }
+        #image-preview-container .image-card img, 
+        #image-preview-container .image-card video {
+            width: 100%;
+            height: auto;
+        }
+        #image-preview-container .image-card.dragging {
+            transform: rotate(5deg);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+        .image-card {
+            transition: transform 0.2s ease;
+        }
+    </style>
+</head>
+<body>
+<div data-role="page" id="infoPage">
+    <div data-role="header" data-position="fixed">
+        <a href="#nav-panel" class="ui-btn ui-btn-icon-left ui-icon-bars">Menu</a>
+        <h1>Gerenciar Informações</h1>
+    </div>
+    <div data-role="main" class="ui-content">
+        <form id="infoForm" enctype="multipart/form-data">
+
+            <div class="form-container">
+                <h3>Mídias Salvas (Arraste para reordenar)</h3>
+                <div id="orderMessage" style="text-align: center; margin-bottom: 10px; color: #4CAF50; font-weight: bold;"></div>
+                <div id="image-preview-container"></div>
+            </div>
+
+            <div class="form-container">
+                <h3>Adicionar Novas Mídias</h3>
+                <label for="fotos">Selecione as fotos e vídeos (.mp4):</label>
+                <div id="local-preview-container"></div>
+                <input type="file" name="fotos[]" id="fotos" multiple accept="image/*,video/mp4">
+            </div>
+            
+            <div class="form-container">
+                <h3>Texto de Informações</h3>
+                <textarea name="info_texto" id="info_texto" rows="8"></textarea>
+            </div>
+
+            <button type="submit" id="saveInfoBtn" class="ui-btn ui-corner-all">Atualizar Informações</button>
+        </form>
+    </div>
+    <div data-role="panel" id="nav-panel" data-display="push" data-theme="b">
+        <ul data-role="listview">
+            <li data-icon="false"><a>Olá, Admin!</a></li>
+            <li data-icon="calendar"><a href="/chacara_kelmy/admin/agenda.html">Agenda</a></li>
+            <li data-icon="info"><a href="/chacara_kelmy/admin/informacoes.html">Informações</a></li>
+            <li data-icon="file"><a href="/chacara_kelmy/admin/contrato.html">Contrato</a></li>
+            <li data-icon="chart"><a href="/chacara_kelmy/admin/graficos.html">Gráficos</a></li>
+            <li data-icon="gear"><a href="/chacara_kelmy/admin/mudar_senha_cliente.html">Mudar Senha Cliente</a></li>
+            <li data-icon="power"><a href="#" id="logoutBtn">Sair</a></li>
+        </ul>
+    </div>
+</div>
+<script src="/chacara_kelmy/assets/js/jquery-1.11.1.min.js"></script>
+<script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
+<script src="/chacara_kelmy/admin/script.js"></script> 
+<script src="/chacara_kelmy/assets/js/jquery.mobile-1.4.5.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</body>
+</html>

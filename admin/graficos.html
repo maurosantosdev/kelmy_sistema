@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Gráficos Financeiros - Chácara Bahamas</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="/chacara_kelmy/assets/css/jquery.mobile-1.4.5.min.css">
+    <link rel="stylesheet" href="/chacara_kelmy/admin/style.css">
+    <script src="https://code.highcharts.com/highcharts.js"></script>
+    <script src="https://code.highcharts.com/modules/exporting.js"></script>
+    <script src="https://code.highcharts.com/modules/accessibility.js"></script>
+    <style>
+        .chart-container {
+            margin: 10px 0;
+            padding: 12px;
+            background: linear-gradient(to bottom, #45515f 0%, #3d4a5a 100%) !important;
+            border: 1px solid #2b384a;
+            border-radius: 6px;
+            box-shadow: 0 1px 0 rgba(255,255,255,0.1);
+        }
+        .chart-wrapper {
+            position: relative;
+            height: 280px;
+            width: 100%;
+        }
+        .summary-cards {
+            display: flex;
+            gap: 10px;
+            margin: 10px 0;
+            flex-wrap: wrap;
+        }
+        .summary-card {
+            flex: 1;
+            min-width: 140px;
+            padding: 15px;
+            background: linear-gradient(to bottom, #45515f 0%, #3d4a5a 100%) !important;
+            border: 1px solid #2b384a;
+            border-radius: 6px;
+            box-shadow: 0 1px 0 rgba(255,255,255,0.1);
+            text-align: center;
+        }
+        .summary-value {
+            font-size: 1.6em;
+            font-weight: bold;
+            color: #ffffff !important;
+            margin: 6px 0;
+        }
+        .summary-label {
+            color: #ffffff !important;
+            font-weight: 400 !important;
+            font-size: 0.9em;
+        }
+        #mesAtualDescricao, #mesAnteriorDescricao, #diferencaDescricao {
+            color: #ffffff !important;
+            font-weight: normal !important;
+            font-size: 0.9em;
+        }
+        .charts-row {
+            display: flex;
+            gap: 12px;
+            margin: 12px 0;
+        }
+        .chart-half {
+            flex: 1;
+            min-width: 220px;
+            margin-bottom: 12px;
+        }
+        .chart-full {
+            width: 100%;
+            margin: 12px 0;
+        }
+        h3 {
+            margin-top: 0;
+            margin-bottom: 8px;
+            font-size: 1.1em;
+        }
+    </style>
+</head>
+<body>
+    <div data-role="page" id="graficosPage">
+        <div data-role="header" data-position="fixed">
+            <a href="#nav-panel" class="ui-btn ui-btn-icon-left ui-icon-bars">Menu</a>
+            <h1>Gráficos Financeiros</h1>
+        </div>
+
+        <div data-role="main" class="ui-content">
+            <div class="summary-cards">
+                <div class="summary-card">
+                    <div class="summary-label">Mês Atual</div>
+                    <div class="summary-value" id="mesAtualValor">R$ 0,00</div>
+                    <div id="mesAtualDescricao">-</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-label">Mês Anterior</div>
+                    <div class="summary-value" id="mesAnteriorValor">R$ 0,00</div>
+                    <div id="mesAnteriorDescricao">-</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-label">Diferença</div>
+                    <div class="summary-value" id="diferencaValor">R$ 0,00</div>
+                    <div id="diferencaDescricao">-</div>
+                </div>
+            </div>
+
+            <div class="charts-row">
+                <div class="chart-half">
+                    <div class="chart-container">
+                        <h3 style="color: #ffffff !important; font-weight: 400 !important; margin-top: 0;">Valores por Mês</h3>
+                        <div class="chart-wrapper" id="graficoPizzaMeses"></div>
+                    </div>
+                </div>
+                <div class="chart-half">
+                    <div class="chart-container">
+                        <h3 style="color: #ffffff !important; font-weight: 400 !important; margin-top: 0;">Evolução Mensal</h3>
+                        <div class="chart-wrapper" id="graficoLinha"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="chart-full">
+                <div class="chart-container">
+                    <h3 style="color: #ffffff !important; text-shadow: 0 1px 1px rgba(0,0,0,0.3) !important; font-weight: 400 !important; margin-top: 0;">Distribuição por Status</h3>
+                    <div class="chart-wrapper" id="graficoPizza"></div>
+                </div>
+            </div>
+        </div>
+
+        <div data-role="panel" id="nav-panel" data-display="push" data-theme="b">
+            <ul data-role="listview">
+                <li data-icon="false"><a>Olá, Admin!</a></li>
+                <li data-icon="calendar"><a href="/chacara_kelmy/admin/agenda.html">Agenda</a></li>
+                <li data-icon="info"><a href="/chacara_kelmy/admin/informacoes.html">Informações</a></li>
+                <li data-icon="file"><a href="/chacara_kelmy/admin/contrato.html">Contrato</a></li>
+                <li data-icon="chart"><a href="/chacara_kelmy/admin/graficos.html">Gráficos</a></li>
+                <li data-icon="gear"><a href="/chacara_kelmy/admin/mudar_senha_cliente.html">Mudar Senha Cliente</a></li>
+                <li data-icon="power"><a href="#" id="logoutBtn">Sair</a></li>
+            </ul>
+        </div>
+    </div>
+
+    <script src="/chacara_kelmy/assets/js/jquery-1.11.1.min.js"></script>
+    <script src="/chacara_kelmy/admin/script.js"></script>
+    <script src="/chacara_kelmy/assets/js/jquery.mobile-1.4.5.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <script>
+        $(document).on('pageshow', '#graficosPage', function() {
+            carregarDadosGraficos();
+            carregarDadosStatus();
+        });
+
+        function carregarDadosGraficos() {
+            $.ajax({
+                url: '/chacara_kelmy/php/graficos_manager.php?action=get_financial_data',
+                type: 'GET',
+                dataType: 'json',
+                success: function(response) {
+                    if (response.success) {
+                        atualizarSumarios(response.data);
+                        criarGraficoPizzaMeses(response.data);
+                        criarGraficoLinha(response.data);
+                    } else {
+                        Swal.fire({
+                            title: 'Erro!',
+                            text: response.message || 'Erro ao carregar dados',
+                            icon: 'error',
+                            confirmButtonText: 'OK'
+                        });
+                    }
+                },
+                error: function() {
+                    Swal.fire({
+                        title: 'Erro!',
+                        text: 'Erro de comunicação com o servidor.',
+                        icon: 'error',
+                        confirmButtonText: 'OK'
+                    });
+                }
+            });
+        }
+
+        function carregarDadosStatus() {
+            $.ajax({
+                url: '/chacara_kelmy/php/graficos_manager.php?action=get_status_data',
+                type: 'GET',
+                dataType: 'json',
+                success: function(response) {
+                    if (response.success) {
+                        criarGraficoPizza(response.data);
+                    } else {
+                        Swal.fire({
+                            title: 'Erro!',
+                            text: response.message || 'Erro ao carregar dados de status',
+                            icon: 'error',
+                            confirmButtonText: 'OK'
+                        });
+                    }
+                },
+                error: function() {
+                    Swal.fire({
+                        title: 'Erro!',
+                        text: 'Erro de comunicação com o servidor.',
+                        icon: 'error',
+                        confirmButtonText: 'OK'
+                    });
+                }
+            });
+        }
+
+        function atualizarSumarios(data) {
+            const mesAtual = data.current_month.total || 0;
+            const mesAnterior = data.previous_month.total || 0;
+            const diferenca = mesAtual - mesAnterior;
+
+            $('#mesAtualValor').text('R$ ' + mesAtual.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2}));
+            $('#mesAnteriorValor').text('R$ ' + mesAnterior.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2}));
+            $('#diferencaValor').text('R$ ' + diferenca.toLocaleString('pt-BR', {minimumFractionDigits: 2, maximumFractionDigits: 2}));
+
+            $('#mesAtualDescricao').text(data.current_month.month_name + '/' + data.current_month.year);
+            $('#mesAnteriorDescricao').text(data.previous_month.month_name + '/' + data.previous_month.year);
+
+            if (diferenca > 0) {
+                $('#diferencaValor').css('color', '#4CAF50');
+                $('#diferencaDescricao').text('Aumento');
+            } else if (diferenca < 0) {
+                $('#diferencaValor').css('color', '#f44336');
+                $('#diferencaDescricao').text('Redução');
+            } else {
+                $('#diferencaValor').css('color', '#ffffff');
+                $('#diferencaDescricao').text('Sem variação');
+            }
+        }
+
+        function criarGraficoPizzaMeses(data) {
+            Highcharts.chart('graficoPizzaMeses', {
+                chart: {
+                    type: 'pie',
+                    backgroundColor: 'transparent',
+                    animation: {
+                        duration: 2000
+                    }
+                },
+                title: {
+                    text: null
+                },
+                tooltip: {
+                    pointFormat: '{series.name}: <b>R$ {point.y:,.2f}</b>'
+                },
+                accessibility: {
+                    point: {
+                        valueSuffix: 'R$'
+                    }
+                },
+                plotOptions: {
+                    pie: {
+                        allowPointSelect: true,
+                        cursor: 'pointer',
+                        startAngle: 0, // Começa do topo
+                        endAngle: 360, // Completa o círculo
+                        center: ['50%', '50%'],
+                        animation: {
+                            duration: 2000,
+                            easing: 'easeOutBounce'
+                        },
+                        dataLabels: {
+                            enabled: true,
+                            distance: 10,
+                            format: '{point.name}<br/>R$ {point.y:,.2f}',
+                            style: {
+                                color: '#ffffff',
+                                textOutline: '0px contrast'
+                            }
+                        },
+                        showInLegend: true
+                    }
+                },
+                series: [{
+                    name: 'Valores',
+                    colorByPoint: true,
+                    data: [{
+                        name: data.previous_month.month_name + '/' + data.previous_month.year,
+                        y: data.previous_month.total || 0,
+                        drilldown: null
+                    }, {
+                        name: data.current_month.month_name + '/' + data.current_month.year,
+                        y: data.current_month.total || 0,
+                        drilldown: null
+                    }],
+                    size: '80%',
+                    innerSize: '30%'
+                }],
+                colors: ['#00aaff', '#0077cc'], // Cores que combinam com o tema admin
+                legend: {
+                    itemStyle: {
+                        color: '#ffffff',
+                        fontWeight: 'bold'
+                    }
+                },
+                credits: {
+                    enabled: false
+                }
+            });
+        }
+
+        function criarGraficoLinha(data) {
+            Highcharts.chart('graficoLinha', {
+                chart: {
+                    type: 'line',
+                    backgroundColor: 'transparent',
+                    style: {
+                        fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif'
+                    }
+                },
+                title: {
+                    text: null
+                },
+                xAxis: {
+                    categories: [
+                        data.previous_month.month_name + '/' + data.previous_month.year,
+                        data.current_month.month_name + '/' + data.current_month.year
+                    ],
+                    labels: {
+                        style: {
+                            color: '#ffffff'
+                        }
+                    }
+                },
+                yAxis: {
+                    title: {
+                        text: null
+                    },
+                    labels: {
+                        style: {
+                            color: '#ffffff'
+                        },
+                        formatter: function() {
+                            return 'R$ ' + Highcharts.numberFormat(this.value, 2);
+                        }
+                    },
+                    gridLineColor: 'rgba(255, 255, 255, 0.1)'
+                },
+                legend: {
+                    itemStyle: {
+                        color: '#ffffff',
+                        fontWeight: 'bold'
+                    }
+                },
+                plotOptions: {
+                    line: {
+                        dataLabels: {
+                            enabled: false
+                        },
+                        enableMouseTracking: true
+                    }
+                },
+                series: [{
+                    name: 'Total Mensal (R$)',
+                    data: [
+                        data.previous_month.total || 0,
+                        data.current_month.total || 0
+                    ],
+                    color: '#00aaff'
+                }],
+                credits: {
+                    enabled: false
+                },
+                accessibility: {
+                    enabled: false
+                }
+            });
+        }
+
+        function criarGraficoPizza(data) {
+            // Preparar dados para o gráfico de pizza
+            var seriesData = [];
+            var totalValue = 0;
+            
+            data.forEach(function(item) {
+                seriesData.push({
+                    name: item.status.charAt(0).toUpperCase() + item.status.slice(1), // Capitalize status
+                    y: item.count,
+                    value: item.total_value
+                });
+                totalValue += item.total_value;
+            });
+
+            Highcharts.chart('graficoPizza', {
+                chart: {
+                    type: 'pie',
+                    backgroundColor: 'transparent'
+                },
+                title: {
+                    text: null
+                },
+                tooltip: {
+                    pointFormat: '{series.name}: <b>{point.y}</b> reservas (R$ {point.value:,.2f})'
+                },
+                accessibility: {
+                    point: {
+                        valueDescriptionFormat: '{index}. {point.name}, {point.y}.'
+                    }
+                },
+                plotOptions: {
+                    pie: {
+                        allowPointSelect: true,
+                        cursor: 'pointer',
+                        dataLabels: {
+                            enabled: true,
+                            format: '<b>{point.name}</b>: {point.y}',
+                            style: {
+                                color: '#ffffff',
+                                textOutline: '0px contrast'
+                            }
+                        },
+                        showInLegend: true
+                    }
+                },
+                series: [{
+                    name: 'Reservas',
+                    colorByPoint: true,
+                    data: seriesData
+                }],
+                colors: ['#00aaff', '#4CAF50', '#FF9800', '#f44336'], // Cores para diferentes status
+                legend: {
+                    itemStyle: {
+                        color: '#ffffff',
+                        fontWeight: 'bold'
+                    }
+                },
+                credits: {
+                    enabled: false
+                }
+            });
+        }
+    </script>
+</body>
+</html>

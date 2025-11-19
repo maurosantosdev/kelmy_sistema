@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Gerenciar Contrato - Chácara Bahamas</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="/chacara_kelmy/assets/css/jquery.mobile-1.4.5.min.css">
+    <link rel="stylesheet" href="/chacara_kelmy/admin/style.css">
+    
+    <style>
+        .form-container {
+            padding: 20px; 
+            margin-bottom: 15px;
+            background: linear-gradient(to bottom, #45515f 0%, #3d4a5a 100%) !important;
+            border: 1px solid #2b384a; 
+            border-radius: 8px;
+            box-shadow: 0 1px 0 rgba(255,255,255,0.1);
+        }
+        .contract-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background-color: white;
+        }
+        .contract-row input, .contract-row select {
+            margin: 5px;
+            padding: 5px;
+        }
+        .delete-btn {
+            margin-left: 10px;
+        }
+        .add-row-btn {
+            margin: 10px 0;
+            background-color: #4CAF50;
+            color: white;
+        }
+        .remove-row-btn {
+            background-color: #f44336;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+<div data-role="page" id="contratoPage">
+    <div data-role="header" data-position="fixed">
+        <a href="#nav-panel" class="ui-btn ui-btn-icon-left ui-icon-bars">Menu</a>
+        <h1>Gerenciar Contrato</h1>
+    </div>
+    
+    <div data-role="main" class="ui-content">
+        <div class="form-container">
+            <h3>Itens do Contrato</h3>
+            <button type="button" id="addContractRow" class="add-row-btn ui-btn ui-corner-all">Adicionar Novo Item</button>
+            <div id="contractItemsContainer">
+                <!-- Contract items will be loaded here dynamically -->
+            </div>
+        </div>
+    </div>
+    
+
+    
+    <!-- Modal para adicionar novo item -->
+    <div data-role="popup" id="addItemModal" data-theme="a" class="ui-corner-all">
+        <div data-role="header" data-theme="a">
+            <h1 style="color: #000000 !important;">Adicionar Novo Item</h1>
+        </div>
+        <div data-role="main" class="ui-content">
+            <form id="addItemForm">
+                <label for="nova_descricao" style="color: #000000 !important; font-weight: 400 !important; margin-bottom: 5px; display: block;">Descrição:</label>
+                <input type="text" id="nova_descricao" name="descricao" placeholder="Descrição do item" required style="width: 100%; margin-bottom: 10px; background: #ffffff !important; border: 1px solid #cccccc !important; border-radius: 5px !important; color: #000000 !important; padding: 8px; box-sizing: border-box;">
+                
+                <div style="display: flex; gap: 10px;">
+                    <div style="flex: 1;">
+                        <label for="nova_qtd" style="color: #000000 !important; font-weight: 400 !important; margin-bottom: 5px; display: block;">Qtd:</label>
+                        <input type="number" id="nova_qtd" name="qtd" min="1" value="1" required style="width: 100%; background: #ffffff !important; border: 1px solid #cccccc !important; border-radius: 5px !important; color: #000000 !important; padding: 8px; box-sizing: border-box;">
+                    </div>
+                    <div style="flex: 1;">
+                        <label for="novo_valor_unitario" style="color: #000000 !important; font-weight: 400 !important; margin-bottom: 5px; display: block;">Valor Unitário (R$):</label>
+                        <input type="text" id="novo_valor_unitario" name="valor_unitario" value="0,00" required style="width: 100%; background: #ffffff !important; border: 1px solid #cccccc !important; border-radius: 5px !important; color: #000000 !important; padding: 8px; box-sizing: border-box;">
+                    </div>
+                </div>
+                
+                <div style="margin-top: 15px; text-align: center;">
+                    <button type="submit" class="ui-btn ui-corner-all ui-btn-b" style="font-weight: 500 !important; border-radius: 5px !important; border: 1px solid #004a8f !important; color: #ffffff !important; background: linear-gradient(to bottom, #00aaff 0%, #0077cc 100%) !important; position: relative;">Adicionar Item</button>
+                    <button type="button" id="cancelAddItem" class="ui-btn ui-corner-all ui-btn-a" style="font-weight: 500 !important; border-radius: 5px !important; border: 1px solid #666666 !important; color: #ffffff !important; background: linear-gradient(to bottom, #888888 0%, #666666 100%) !important; position: relative;">Cancelar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal para editar item -->
+    <div data-role="popup" id="editItemModal" data-theme="a" class="ui-corner-all">
+        <div data-role="header" data-theme="a">
+            <h1 style="color: #000000 !important;">Editar Item</h1>
+        </div>
+        <div data-role="main" class="ui-content">
+            <form id="editItemForm">
+                <input type="hidden" id="edit_item_id">
+                
+                <label for="edit_descricao" style="color: #000000 !important; font-weight: 400 !important; margin-bottom: 5px; display: block;">Descrição:</label>
+                <input type="text" id="edit_descricao" name="descricao" placeholder="Descrição do item" required style="width: 100%; margin-bottom: 10px; background: #ffffff !important; border: 1px solid #cccccc !important; border-radius: 5px !important; color: #000000 !important; padding: 8px; box-sizing: border-box;">
+                
+                <div style="display: flex; gap: 10px;">
+                    <div style="flex: 1;">
+                        <label for="edit_qtd" style="color: #000000 !important; font-weight: 400 !important; margin-bottom: 5px; display: block;">Qtd:</label>
+                        <input type="number" id="edit_qtd" name="qtd" min="1" required style="width: 100%; background: #ffffff !important; border: 1px solid #cccccc !important; border-radius: 5px !important; color: #000000 !important; padding: 8px; box-sizing: border-box;">
+                    </div>
+                    <div style="flex: 1;">
+                        <label for="edit_valor_unitario" style="color: #000000 !important; font-weight: 400 !important; margin-bottom: 5px; display: block;">Valor Unitário (R$):</label>
+                        <input type="text" id="edit_valor_unitario" name="valor_unitario" required style="width: 100%; background: #ffffff !important; border: 1px solid #cccccc !important; border-radius: 5px !important; color: #000000 !important; padding: 8px; box-sizing: border-box;">
+                    </div>
+                </div>
+                
+                <div style="margin-top: 15px; text-align: center;">
+                    <button type="submit" class="ui-btn ui-corner-all ui-btn-b" style="font-weight: 500 !important; border-radius: 5px !important; border: 1px solid #004a8f !important; color: #ffffff !important; background: linear-gradient(to bottom, #00aaff 0%, #0077cc 100%) !important; position: relative;">Atualizar Item</button>
+                    <button type="button" id="cancelEditItem" class="ui-btn ui-corner-all ui-btn-a" style="font-weight: 500 !important; border-radius: 5px !important; border: 1px solid #666666 !important; color: #ffffff !important; background: linear-gradient(to bottom, #888888 0%, #666666 100%) !important; position: relative;">Cancelar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div data-role="panel" id="nav-panel" data-display="push" data-theme="b">
+        <ul data-role="listview">
+            <li data-icon="false"><a>Olá, Admin!</a></li>
+            <li data-icon="calendar"><a href="/chacara_kelmy/admin/agenda.html">Agenda</a></li>
+            <li data-icon="info"><a href="/chacara_kelmy/admin/informacoes.html">Informações</a></li>
+            <li data-icon="file"><a href="/chacara_kelmy/admin/contrato.html">Contrato</a></li>
+            <li data-icon="chart"><a href="/chacara_kelmy/admin/graficos.html">Gráficos</a></li>
+            <li data-icon="gear"><a href="/chacara_kelmy/admin/mudar_senha_cliente.html">Mudar Senha Cliente</a></li>
+            <li data-icon="power"><a href="#" id="logoutBtn">Sair</a></li>
+        </ul>
+    </div>
+</div>
+
+<script src="/chacara_kelmy/assets/js/jquery-1.11.1.min.js"></script>
+<script src="/chacara_kelmy/admin/script.js"></script>
+<script src="/chacara_kelmy/assets/js/jquery.mobile-1.4.5.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</body>
+</html>

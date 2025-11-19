@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin Login - Chácara Bahamas</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link rel="stylesheet" href="/chacara_kelmy/assets/css/jquery.mobile-1.4.5.min.css">
+    <link rel="stylesheet" href="/chacara_kelmy/admin/style.css">
+</head>
+<body>
+
+    <div data-role="page" id="loginPage">
+        <div data-role="header">
+            <h1>Login Administrativo</h1>
+        </div>
+
+        <div data-role="main" class="ui-content">
+            <form id="loginForm">
+                <label for="usuario">Usuário:</label>
+                <input type="text" name="usuario" id="usuario" value="admin" required>
+
+                <label for="senha">Senha:</label>
+                <input type="password" name="senha" id="senha" required>
+
+                <button type="submit" id="submitBtn" class="ui-btn ui-btn-b ui-corner-all">Entrar</button>
+            </form>
+            <div id="errorMessage" style="color: red; text-align: center; margin-top: 15px;"></div>
+        </div>
+    </div>
+
+    <script src="/chacara_kelmy/assets/js/jquery-1.11.1.min.js"></script>
+    <script src="/chacara_kelmy/admin/script.js"></script> 
+    <script src="/chacara_kelmy/assets/js/jquery.mobile-1.4.5.min.js"></script>
+</body>
+</html>```
+
+**Arquivo: `/admin/agenda.html` (verificar se está assim)**
+```html
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin Agenda - Chácara Bahamas</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link rel="stylesheet" href="/chacara_kelmy/assets/css/jquery.mobile-1.4.5.min.css">
+    <link rel="stylesheet" href="/chacara_kelmy/admin/style.css">
+</head>
+<body>
+
+<div data-role="page" id="agendaPage">
+    <div data-role="header" data-position="fixed">
+        <a href="#nav-panel" class="ui-btn ui-shadow ui-corner-all ui-btn-icon-left ui-icon-bars">Menu</a>
+        <h1>Gerenciar Agenda</h1>
+    </div>
+
+    <div data-role="main" class="ui-content">
+        <h3>Calendário de Preços</h3>
+
+        <div id="calendarControls">
+            <button id="prevMonth" class="ui-btn ui-icon-arrow-l ui-btn-icon-notext ui-corner-all">Mês Anterior</button>
+            <h4 id="currentMonthYear" style="margin: 0;"></h4>
+            <button id="nextMonth" class="ui-btn ui-icon-arrow-r ui-btn-icon-notext ui-corner-all">Próximo Mês</button>
+        </div>
+        
+        <div id="calendar"></div>
+
+        <div data-role="collapsible" data-collapsed="false">
+            <h4>Definir Preço para um Período</h4>
+            <div class="ui-collapsible-content">
+                <form id="priceForm">
+                    <label for="data_inicio">Data de Início:</label>
+                    <input type="date" name="data_inicio" id="data_inicio" required>
+
+                    <label for="data_fim">Data de Fim:</label>
+                    <input type="date" name="data_fim" id="data_fim" required>
+
+                    <label for="preco">Preço por dia (R$):</label>
+                    <input type="number" name="preco" id="preco" step="0.01" placeholder="Ex: 700.00" required>
+                    
+                    <button type="submit" id="savePriceBtn" class="ui-btn ui-corner-all">Salvar Período</button>
+                </form>
+                <div id="formMessage" style="text-align: center; margin-top: 10px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <div data-role="panel" id="nav-panel" data-display="push" data-theme="b">
+        <ul data-role="listview">
+            <li data-icon="false"><a href="#">Olá, Admin!</a></li>
+            <li data-icon="calendar"><a href="/chacara_kelmy/admin/agenda.html">Agenda</a></li>
+            <li data-icon="info"><a href="/chacara_kelmy/admin/informacoes.html">Informações</a></li>
+            <li data-icon="power"><a href="#" id="logoutBtn">Sair</a></li>
+        </ul>
+    </div>
+</div>
+
+<script src="/chacara_kelmy/assets/js/jquery-1.11.1.min.js"></script>
+<script src="/chacara_kelmy/admin/script.js"></script> 
+<script src="/chacara_kelmy/assets/js/jquery.mobile-1.4.5.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+</body>
+</html>

@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Teste de Cadastro</title>
+    <meta charset="UTF-8">
+    <script src="assets/js/jquery-1.11.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body>
+    <div>
+        <h2>Formulário de Teste</h2>
+        <form id="cadastroForm" method="post" action="php/cliente_cadastro.php">
+            <label for="nome">Nome Completo:</label>
+            <input type="text" name="nome" id="nome" required value="Teste Usuário">
+            
+            <label for="rg">RG:</label>
+            <input type="text" name="rg" id="rg" required value="123456789">
+            
+            <label for="cpf">CPF:</label>
+            <input type="text" name="cpf" id="cpf" required value="12345678901">
+            
+            <label for="estado_civil">Estado Civil:</label>
+            <select name="estado_civil" id="estado_civil" required>
+                <option value="solteiro">Solteiro(a)</option>
+            </select>
+            
+            <label for="rua">Rua:</label>
+            <input type="text" name="rua" id="rua" required value="Rua Teste">
+            
+            <label for="numero">Número:</label>
+            <input type="text" name="numero" id="numero" required value="123">
+            
+            <label for="bairro">Bairro:</label>
+            <input type="text" name="bairro" id="bairro" required value="Bairro Teste">
+            
+            <label for="cep">CEP:</label>
+            <input type="text" name="cep" id="cep" required value="12345678">
+            
+            <label for="cidade">Cidade:</label>
+            <input type="text" name="cidade" id="cidade" required value="Cidade Teste">
+            
+            <label for="telefone">Telefone:</label>
+            <input type="tel" name="telefone" id="telefone" required value="11999999999">
+            
+            <label for="data_nascimento">Data de Nascimento:</label>
+            <input type="date" name="data_nascimento" id="data_nascimento" required value="1990-01-01">
+            
+            <label for="email">E-mail:</label>
+            <input type="email" name="email" id="email" required value="teste.teste.2025@exemplo.com">
+            
+            <label for="senha">Senha:</label>
+            <input type="password" name="senha" id="senha" required value="senha123">
+            
+            <button type="submit" class="cadastrar-btn">Cadastrar</button>
+        </form>
+        
+        <div id="resultado"></div>
+    </div>
+    
+    <script>
+        // Colocar aqui o conteúdo do cadastro.js para testar
+        $(document).ready(function() {
+            // Máscara para CPF
+            $('#cpf').on('input', function() {
+                let value = $(this).val().replace(/\D/g, '');
+                if (value.length > 11) value = value.substring(0, 11);
+                
+                if (value.length > 9) {
+                    value = value.replace(/(\d{3})(\d)/, '$1.$2');
+                    value = value.replace(/(\d{3})(\d)/, '$1.$2');
+                    value = value.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+                } else if (value.length > 6) {
+                    value = value.replace(/(\d{3})(\d)/, '$1.$2');
+                    value = value.replace(/(\d{3})(\d)/, '$1.$2');
+                } else if (value.length > 3) {
+                    value = value.replace(/(\d{3})(\d)/, '$1.$2');
+                }
+                
+                $(this).val(value);
+            });
+            
+            // Máscara para CEP
+            $('#cep').on('input', function() {
+                let value = $(this).val().replace(/\D/g, '');
+                if (value.length > 8) value = value.substring(0, 8);
+                
+                if (value.length > 5) {
+                    value = value.replace(/(\d{5})(\d{3})$/, '$1-$2');
+                }
+                
+                $(this).val(value);
+            });
+            
+            // Máscara para telefone
+            $('#telefone').on('input', function() {
+                let value = $(this).val().replace(/\D/g, '');
+                if (value.length > 11) value = value.substring(0, 11);
+                
+                if (value.length > 6) {
+                    value = value.replace(/(\d{2})(\d)/, '($1) $2');
+                    value = value.replace(/(\d{5})(\d{4})$/, '$1-$2');
+                } else if (value.length > 2) {
+                    value = value.replace(/(\d{2})(\d)/, '($1) $2');
+                }
+                
+                $(this).val(value);
+            });
+            
+            // Função para formatar campos antes do envio
+            function formatFields() {
+                // Formatar CPF
+                let cpfValue = $('#cpf').val().replace(/\D/g, '');
+                if (cpfValue.length === 11) {
+                    cpfValue = cpfValue.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+                    $('#cpf').val(cpfValue);
+                }
+                
+                // Formatar CEP
+                let cepValue = $('#cep').val().replace(/\D/g, '');
+                if (cepValue.length === 8) {
+                    cepValue = cepValue.replace(/(\d{5})(\d{3})/, '$1-$2');
+                    $('#cep').val(cepValue);
+                }
+                
+                // Formatar telefone
+                let telefoneValue = $('#telefone').val().replace(/\D/g, '');
+                if (telefoneValue.length === 11) {
+                    telefoneValue = telefoneValue.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+                    $('#telefone').val(telefoneValue);
+                } else if (telefoneValue.length === 10) {
+                    telefoneValue = telefoneValue.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
+                    $('#telefone').val(telefoneValue);
+                }
+            }
+            
+            // Formatar campos automaticamente ao sair do campo
+            $('#cpf').on('blur', function() {
+                let value = $(this).val().replace(/\D/g, '');
+                if (value.length === 11) {
+                    value = value.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+                    $(this).val(value);
+                }
+            });
+            
+            $('#cep').on('blur', function() {
+                let value = $(this).val().replace(/\D/g, '');
+                if (value.length === 8) {
+                    value = value.replace(/(\d{5})(\d{3})/, '$1-$2');
+                    $(this).val(value);
+                }
+            });
+            
+            $('#telefone').on('blur', function() {
+                let value = $(this).val().replace(/\D/g, '');
+                if (value.length === 11) {
+                    value = value.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+                    $(this).val(value);
+                } else if (value.length === 10) {
+                    value = value.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
+                    $(this).val(value);
+                }
+            });
+            
+            // Manipulador de submit para o formulário
+            $(document).on('submit', '#cadastroForm', function(e) {
+                e.preventDefault();
+                
+                Swal.fire({
+                    title: 'Processando',
+                    text: 'Submit acionado! Processando cadastro...',
+                    icon: 'info',
+                    confirmButtonText: 'OK'
+                });
+                
+                // Formatar campos antes do envio
+                formatFields();
+                
+                const nome = $('#nome').val();
+                const rg = $('#rg').val();
+                const cpf = $('#cpf').val().replace(/[^\d]/g, ''); // Remover formatação para envio
+                const estado_civil = $('#estado_civil').val();
+                const rua = $('#rua').val();
+                const numero = $('#numero').val();
+                const bairro = $('#bairro').val();
+                const cep = $('#cep').val().replace(/[^\d]/g, ''); // Remover formatação para envio
+                const cidade = $('#cidade').val();
+                const telefone = $('#telefone').val().replace(/[^\d]/g, ''); // Remover formatação para envio
+                const data_nascimento = $('#data_nascimento').val();
+                const email = $('#email').val();
+                const senha = $('#senha').val();
+                
+                if (!nome || !rg || !cpf || !estado_civil || !rua || !numero || !bairro || !cep || !cidade || !telefone || !data_nascimento || !email || !senha) {
+                    Swal.fire({
+                        title: 'Erro',
+                        text: 'Por favor, preencha todos os campos.',
+                        icon: 'error',
+                        confirmButtonText: 'OK'
+                    });
+                    return;
+                }
+                
+                console.log('Dados sendo enviados:', {
+                    nome: nome,
+                    rg: rg,
+                    cpf: cpf,
+                    estado_civil: estado_civil,
+                    rua: rua,
+                    numero: numero,
+                    bairro: bairro,
+                    cep: cep,
+                    cidade: cidade,
+                    telefone: telefone,
+                    data_nascimento: data_nascimento,
+                    email: email,
+                    senha: senha
+                });
+                
+                $.ajax({
+                    url: 'php/cliente_cadastro.php',
+                    type: 'POST',
+                    data: {
+                        nome: nome,
+                        rg: rg,
+                        cpf: cpf,
+                        estado_civil: estado_civil,
+                        rua: rua,
+                        numero: numero,
+                        bairro: bairro,
+                        cep: cep,
+                        cidade: cidade,
+                        telefone: telefone,
+                        data_nascimento: data_nascimento,
+                        email: email,
+                        senha: senha
+                    },
+                    dataType: 'json',
+                    success: function(response) {
+                        $('#resultado').html('<p style="color: green;">Resposta: ' + JSON.stringify(response) + '</p>');
+                        if (response.success) {
+                            Swal.fire({
+                                title: 'Sucesso!',
+                                text: response.message,
+                                icon: 'success',
+                                confirmButtonText: 'OK'
+                            }).then((result) => {
+                                if (result.isConfirmed) {
+                                    // Redirecionar para a página de reservas
+                                    window.location.href = 'https://chacararecantodosossegorr.com.br/chacara_kelmy/cliente/reserva.php';
+                                }
+                            });
+                        } else {
+                            Swal.fire({
+                                title: 'Erro',
+                                text: response.message,
+                                icon: 'error',
+                                confirmButtonText: 'OK'
+                            });
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        $('#resultado').html('<p style="color: red;">Erro AJAX: ' + error + '</p>');
+                        console.log('Erro AJAX:', xhr, status, error);
+                        Swal.fire({
+                            title: 'Erro de Comunicação',
+                            text: 'Erro na comunicação com o servidor: ' + error,
+                            icon: 'error',
+                            confirmButtonText: 'OK'
+                        });
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>

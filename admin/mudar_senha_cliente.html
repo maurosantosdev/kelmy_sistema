@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Mudar Senha do Cliente - Chácara Bahamas</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link rel="stylesheet" href="/chacara_kelmy/assets/css/jquery.mobile-1.4.5.min.css">
+    <link rel="stylesheet" href="/chacara_kelmy/admin/style.css">
+</head>
+<body>
+
+<div data-role="page" id="changePasswordPage">
+    <div data-role="header" data-position="fixed">
+        <a href="#nav-panel" class="ui-btn ui-shadow ui-corner-all ui-btn-icon-left ui-icon-bars">Menu</a>
+        <h1>Mudar Senha do Cliente</h1>
+    </div>
+
+    <div data-role="main" class="ui-content">
+        <form id="changePasswordForm" method="POST" action="#" data-ajax="false">
+            <div class="form-container">
+                <h3>Mudar Senha do Cliente</h3>
+                <label for="email_cliente">Email do Cliente:</label>
+                <input type="email" name="email_cliente" id="email_cliente" placeholder="Digite o email do cliente" required>
+
+                <label for="nova_senha">Nova Senha:</label>
+                <input type="password" name="nova_senha" id="nova_senha" placeholder="Digite a nova senha" required>
+
+                <label for="confirmar_senha">Confirmar Nova Senha:</label>
+                <input type="password" name="confirmar_senha" id="confirmar_senha" placeholder="Confirme a nova senha" required>
+
+                <button type="submit" id="changePasswordBtn" class="ui-btn ui-corner-all">Atualizar Senha</button>
+            </div>
+        </form>
+    </div>
+
+    <div data-role="panel" id="nav-panel" data-display="push" data-theme="b">
+        <ul data-role="listview">
+            <li data-icon="false"><a href="#">Olá, Admin!</a></li>
+            <li data-icon="calendar"><a href="/chacara_kelmy/admin/agenda.html">Agenda</a></li>
+            <li data-icon="info"><a href="/chacara_kelmy/admin/informacoes.html">Informações</a></li>
+            <li data-icon="file"><a href="/chacara_kelmy/admin/contrato.html">Contrato</a></li>
+            <li data-icon="chart"><a href="/chacara_kelmy/admin/graficos.html">Gráficos</a></li>
+            <li data-icon="gear"><a href="/chacara_kelmy/admin/mudar_senha_cliente.html">Mudar Senha Cliente</a></li>
+            <li data-icon="power"><a href="#" id="logoutBtn">Sair</a></li>
+        </ul>
+    </div>
+</div>
+
+<script src="/chacara_kelmy/assets/js/jquery-1.11.1.min.js"></script>
+<script src="/chacara_kelmy/admin/script.js"></script> 
+<script src="/chacara_kelmy/assets/js/jquery.mobile-1.4.5.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+
+</body>
+</html>
