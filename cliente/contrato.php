@@ -251,19 +251,25 @@ if (isset($num_diarias_to_display)) {
             text-align: center;
             min-width: 40%;
             flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
         }
-        
+
         .signature-label {
             font-weight: bold;
             margin-bottom: 5px;
             white-space: nowrap;
-            padding-top: 30px;
-            border-top: 1px solid #ccc;
+            padding-top: 5px;
         }
         
         .signature-name {
             margin-top: 10px;
             font-weight: normal;
+        }
+
+        .signature-section-content {
+            position: relative;
         }
         
         .contract-table {
@@ -500,6 +506,10 @@ if (isset($num_diarias_to_display)) {
         .signature-name {
             margin-top: 10px;
             font-weight: normal;
+        }
+
+        .signature-section-content {
+            position: relative;
         }
     </style>
 </head>
@@ -783,6 +793,50 @@ if (isset($num_diarias_to_display)) {
                 </table>
                 <?php endif; ?>
                 
+                <?php if(!$contrato_assinado): ?>
+                <div class="signature-section">
+                    <?php
+                    $meses = [
+                        '01' => 'janeiro', '02' => 'fevereiro', '03' => 'março', '04' => 'abril',
+                        '05' => 'maio', '06' => 'junho', '07' => 'julho', '08' => 'agosto',
+                        '09' => 'setembro', '10' => 'outubro', '11' => 'novembro', '12' => 'dezembro'
+                    ];
+                    $mes_atual = date('m');
+                    $nome_mes = $meses[$mes_atual] ?? 'mês desconhecido';
+                    ?>
+                    Boa Vista – RR, <?php echo date('d'); ?> de <?php echo $nome_mes; ?> de <?php echo date('Y'); ?>
+                    <!-- Checkbox e botão de assinatura -->
+                    <div style="margin-bottom: 20px;">
+                        <input class="custom-checkbox" type="checkbox" id="aceiteContrato" required>
+                        <label for="aceiteContrato">
+                            Li e concordo com todos os termos do contrato
+                        </label>
+                    </div>
+
+                    <div class="d-grid gap-2" style="margin-bottom: 20px;">
+                        <button class="btn btn-secondary btn-lg" type="button" id="btnAssinarContrato" disabled>
+                            <i class="fas fa-signature"></i> Assinar Contrato
+                        </button>
+                    </div>
+
+                    <!-- Mensagem de sucesso após assinatura -->
+                    <div id="mensagemAssinatura" class="alert alert-success mt-3" style="display: none; margin-bottom: 20px;">
+                        <i class="fas fa-check-circle"></i> Contrato assinado com sucesso!
+                    </div>
+
+                    <div class="signature-line">
+                        <div class="signature-item">
+                            <div class="signature-name"><?php echo $user['nome']; ?></div>
+                            <div class="signature-label">_________________________________<br>Locatário(a)</div>
+                        </div>
+                        <div class="signature-item">
+                            <img src="../assets/imagens/assinatura.png" alt="Assinatura do Locador" style="max-width: 150px; max-height: 60px; display: block; margin: 0 auto 10px auto;">
+                            <div class="signature-name">Kelmy Araújo Vasconcelos</div>
+                            <div class="signature-label">_________________________________<br>Locador</div>
+                        </div>
+                    </div>
+                </div>
+                <?php else: ?>
                 <div class="signature-section">
                     <?php
                     $meses = [
@@ -796,41 +850,24 @@ if (isset($num_diarias_to_display)) {
                     Boa Vista – RR, <?php echo date('d'); ?> de <?php echo $nome_mes; ?> de <?php echo date('Y'); ?>
                     <div class="signature-line">
                         <div class="signature-item">
-                            <div class="signature-label">_________________________________<br>Locatário(a)</div>
-                            <div class="signature-name"><?php echo $user['nome']; ?></div>
                             <?php if($contrato_assinado): ?>
                             <div style="margin-top: 10px;">
                                 <span class="btn btn-success btn-sm"><i class="fas fa-signature"></i> Documento assinado digitalmente</span>
                             </div>
                             <?php endif; ?>
+                            <div class="signature-name"><?php echo $user['nome']; ?></div>
+                            <div class="signature-label">_________________________________<br>Locatário(a)</div>
                         </div>
                         <div class="signature-item">
-                            <div class="signature-label">_________________________________<br>Locador</div>
+                            <img src="../assets/imagens/assinatura.png" alt="Assinatura do Locador" style="max-width: 150px; max-height: 60px; display: block; margin: 0 auto 10px auto;">
                             <div class="signature-name">Kelmy Araújo Vasconcelos</div>
+                            <div class="signature-label">_________________________________<br>Locador</div>
                         </div>
                     </div>
                 </div>
-                
+                <?php endif; ?>
+
                 <?php if(!$contrato_assinado): ?>
-                <!-- Checkbox e botão de assinatura -->
-                <div>
-                    <input class="custom-checkbox" type="checkbox" id="aceiteContrato" required>
-                    <label for="aceiteContrato">
-                        Li e concordo com todos os termos do contrato
-                    </label>
-                </div>
-                
-                <div class="d-grid gap-2">
-                    <button class="btn btn-secondary btn-lg" type="button" id="btnAssinarContrato" disabled>
-                        <i class="fas fa-signature"></i> Assinar Contrato
-                    </button>
-                </div>
-                
-                <!-- Mensagem de sucesso após assinatura -->
-                <div id="mensagemAssinatura" class="alert alert-success mt-3" style="display: none;">
-                    <i class="fas fa-check-circle"></i> Contrato assinado com sucesso!
-                </div>
-                <?php else: ?>
                 <!-- Mensagem de contrato já assinado -->
                 <?php if ($reserva_id_fornecido): ?>
                 <div class="alert alert-info">

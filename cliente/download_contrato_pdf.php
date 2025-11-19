@@ -447,29 +447,32 @@ ob_end_clean();
 // Verificar se a biblioteca TCPDF está instalada
 if (file_exists('../vendor/autoload.php')) {
     require_once '../vendor/autoload.php';
-    
+
     // Verificar se TCPDF está disponível
     if (class_exists('TCPDF')) {
         // Criar instância do TCPDF
         $pdf = new TCPDF(PDF_PAGE_ORIENTATION, PDF_UNIT, PDF_PAGE_FORMAT, true, 'UTF-8', false);
-        
+
         // Definir informações do documento
         $pdf->SetCreator(PDF_CREATOR);
         $pdf->SetTitle('Contrato de Locação - Chácara Recanto do Sossego');
         $pdf->SetSubject('Contrato de Locação');
         $pdf->SetKeywords('Contrato, PDF, Chácara');
-        
+
+        // Definir fonte padrão do TCPDF (fonte core que não requer arquivos externos)
+        $pdf->SetFont('courier', '', 10);
+
         // Remover headers e footers
         $pdf->setPrintHeader(false);
         $pdf->setPrintFooter(false);
-        
+
         // Definir margens
         $pdf->SetMargins(PDF_MARGIN_LEFT, PDF_MARGIN_TOP, PDF_MARGIN_RIGHT);
         $pdf->SetAutoPageBreak(TRUE, PDF_MARGIN_BOTTOM);
-        
+
         // Definir informações do autor
         $pdf->SetAuthor('Chácara Recanto do Sossego');
-        
+
         // Adicionar uma página
         $pdf->AddPage();
         

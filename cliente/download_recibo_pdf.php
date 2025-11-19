@@ -281,6 +281,9 @@ try {
             $pdf->SetSubject('Recibo de Aluguel');
             $pdf->SetKeywords('Recibo, PDF, Chácara');
 
+            // Definir fonte padrão do TCPDF (fonte core que não requer arquivos externos)
+            $pdf->SetFont('courier', '', 10);
+
             // Remover headers e footers
             $pdf->setPrintHeader(false);
             $pdf->setPrintFooter(false);

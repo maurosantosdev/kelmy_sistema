@@ -351,17 +351,23 @@ try {
                     </div>
 
                     <div class="signature-section">
-                        <div style="text-align: center; margin-bottom: 10px;">
-                            <button onclick="alert('Funcionalidade de visualização de contratos será implementada')" style="color: black; border: 1px solid #333; padding: 8px 16px; text-decoration: none; display: inline-block; font-size: 12px; margin: 4px 2px; cursor: pointer; background-color: #f0f0f0;">
-                                Ver contratos assinados
-                            </button>
-                        </div>
                         <table style="width: 100%; text-align: center !important; margin: 10px auto 0; border: none; border-collapse: collapse;">
                             <tr>
                                 <td style="text-align: center !important; padding: 0; margin: 0;">
-                                    <div class="signature-label" style="text-align: center !important; display: block; margin-top: 15px;">
-                                        <span style="display: inline-block; border-top: 1px solid #000; min-width: 200px; max-width: 50%; height: 1px;"></span><br>
-                                        Assinatura do Locatário
+                                    <div style="text-align: center !important; display: block; margin-top: 15px;">
+                                        <?php
+                                        // Caminho para a imagem de assinatura
+                                        $assinatura_path = '../assets/imagens/assinatura.png';
+                                        if (file_exists($assinatura_path)) {
+                                            // Converter a imagem para base64 para garantir que ela seja incorporada ao PDF
+                                            $imageData = base64_encode(file_get_contents($assinatura_path));
+                                            echo '<img src="data:image/png;base64,' . $imageData . '" width="200" style="height: auto; margin-bottom: 5px;" alt="Assinatura">';
+                                        }
+                                        ?>
+                                        <div class="signature-label" style="text-align: center !important; display: block; margin-top: 5px;">
+                                            <span style="display: inline-block; border-top: 1px solid #000; min-width: 200px; max-width: 50%; height: 1px;"></span><br>
+                                            Assinatura do Locatário
+                                        </div>
                                     </div>
                                 </td>
                             </tr>
@@ -390,6 +396,9 @@ try {
             $pdf->SetTitle('Recibo de Aluguel por Temporada - Chácara Recanto do Sossego');
             $pdf->SetSubject('Recibo de Aluguel');
             $pdf->SetKeywords('Recibo, PDF, Chácara');
+
+            // Definir fonte padrão usando a configuração padrão do TCPDF
+            $pdf->SetFont(PDF_FONT_NAME_MAIN, '', 10);
 
             // Remover headers e footers
             $pdf->setPrintHeader(false);
