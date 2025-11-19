@@ -1,0 +1,7 @@
+uploads/
+*.log
+nohup.out
+*.zip
+*.mp4
+vendor/tecnickcom/tcpdf/fonts/
+
