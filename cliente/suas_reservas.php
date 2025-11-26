@@ -35,51 +35,51 @@ if (!isset($_SESSION['user_id'])) {
             color: white;
             min-width: 60px;
         }
-        
+
         .w-100 {
             width: 100% !important;
         }
-        
+
         .status-pending {
             background-color: #f0ad4e !important; /* Cor amarela para pendente */
         }
-        
+
         .status-approved {
             background-color: #5cb85c !important; /* Cor verde para confirmado */
         }
-        
+
         .status-cancelled {
             background-color: #d9534f !important; /* Cor vermelha para cancelado */
         }
-        
+
         .status-other {
             background-color: #777 !important; /* Cor padrão para outros status */
         }
-        
+
         .payment-summary-item {
             background-color: #d4edda !important; /* Fundo verde claro para o resumo de pagamento */
             border: 1px solid #c3e6cb !important;
             border-radius: 8px !important;
         }
-        
+
         .divider {
             background-color: transparent !important;
             padding: 0 !important;
             margin: 5px 0 !important;
             border: none !important;
         }
-        
+
         .divider hr {
             border: 0;
             border-top: 1px solid #ddd;
             margin: 5px 0;
         }
-        
+
         .btn-lg {
             padding: 12px 20px !important;
             font-size: 1.1em !important;
         }
-        
+
         /* Estilos para remover texturas e garantir texto branco nos botões */
         .btn-success {
             background-color: #28a745 !important;
@@ -88,7 +88,7 @@ if (!isset($_SESSION['user_id'])) {
             box-shadow: none !important;
             text-shadow: none !important;
         }
-        
+
         .btn-primary {
             background-color: #007bff !important;
             color: white !important;
@@ -96,7 +96,7 @@ if (!isset($_SESSION['user_id'])) {
             box-shadow: none !important;
             text-shadow: none !important;
         }
-        
+
         .btn-warning {
             background-color: #ffc107 !important;
             color: #212529 !important;
@@ -105,7 +105,7 @@ if (!isset($_SESSION['user_id'])) {
             text-shadow: none !important;
             font-weight: normal !important;
         }
-        
+
         .btn-danger {
             background-color: #dc3545 !important;
             color: white !important;
@@ -114,7 +114,7 @@ if (!isset($_SESSION['user_id'])) {
             text-shadow: none !important;
             font-weight: normal !important;
         }
-        
+
         .btn-info {
             background-color: #17a2b8 !important;
             color: white !important;
@@ -123,7 +123,7 @@ if (!isset($_SESSION['user_id'])) {
             text-shadow: none !important;
             font-weight: normal !important;
         }
-        
+
         /* Forçar estilos Bootstrap em elementos jQuery Mobile */
         .ui-content .btn {
             display: inline-block !important;
@@ -135,25 +135,25 @@ if (!isset($_SESSION['user_id'])) {
             background-image: none !important;
             border: 1px solid transparent !important;
         }
-        
+
         .ui-content .btn:focus,
         .ui-content .btn:active:focus {
             outline: thin dotted !important;
             outline: 5px auto -webkit-focus-ring-color !important;
             outline-offset: -2px !important;
         }
-        
+
         .ui-content .btn:hover,
         .ui-content .btn:focus {
             text-decoration: none !important;
         }
-        
+
         .ui-content .btn:active {
             background-image: none !important;
             outline: 0 !important;
             box-shadow: inset 0 3px 5px rgba(0, 0, 0, 0.125) !important;
         }
-        
+
         .ui-content .btn.disabled,
         .ui-content .btn[disabled],
         fieldset[disabled] .ui-content .btn {
@@ -162,7 +162,7 @@ if (!isset($_SESSION['user_id'])) {
             opacity: 0.65 !important;
             box-shadow: none !important;
         }
-        
+
         .ui-content .btn-success,
         .ui-content .btn-primary,
         .ui-content .btn-warning,
@@ -170,20 +170,20 @@ if (!isset($_SESSION['user_id'])) {
             color: white !important;
             background-color: #28a745 !important;
         }
-        
+
         .ui-content .btn-primary {
             background-color: #007bff !important;
         }
-        
+
         .ui-content .btn-warning {
             background-color: #ffc107 !important;
             color: #000 !important;
         }
-        
+
         .ui-content .btn-danger {
             background-color: #dc3545 !important;
         }
-        
+
         /* Estilos adicionais com alta especificidade para forçar o texto branco */
         button.btn-success,
         a.btn-success,
@@ -194,7 +194,7 @@ if (!isset($_SESSION['user_id'])) {
             color: white !important;
             text-shadow: none !important;
         }
-        
+
         /* Regras para garantir que os estilos sejam aplicados a elementos criados dinamicamente */
         .ui-content .btn-success,
         .ui-content .btn-primary {
@@ -213,7 +213,22 @@ if (!isset($_SESSION['user_id'])) {
             flex: 1 !important;
             min-width: 150px !important;
         }
-        
+
+        /* Correções para o footer fixo com jQuery Mobile */
+        .ui-page {
+            min-height: 100vh;
+        }
+
+        .ui-footer {
+            z-index: 100 !important;
+        }
+
+        /* Garantir que o footer fique visível quando o modal está aberto */
+        #pix-modal-overlay + .ui-page .ui-footer {
+            position: fixed !important;
+            z-index: 99 !important;
+        }
+
 
     </style>
 </head>
@@ -271,7 +286,7 @@ function loadUserReservations() {
             } else {
                 document.getElementById('header-title').textContent = 'Suas Reservas';
             }
-            
+
             // Exibir mensagem de confirmação se houve mudança recente de status
             if(response.recent_status_change === true) {
                 // Exibir notificação de confirmação de pagamento
@@ -282,7 +297,7 @@ function loadUserReservations() {
                     confirmButtonText: 'OK'
                 });
             }
-            
+
             if(response.success && response.reservations.length > 0) {
                 // Ordenar todas as reservas por data em ordem crescente (mais antiga primeiro)
                 try {
@@ -302,7 +317,7 @@ function loadUserReservations() {
                     console.error('Erro ao ordenar reservas:', e);
                     // Se der erro na ordenação, continuar sem ordenar
                 }
-                
+
                 // Filtrar e calcular total das reservas pendentes
                 let reservasPendentes = response.reservations.filter(reserva => reserva.status === 'pendente');
                 let totalPendente = 0;
@@ -312,9 +327,9 @@ function loadUserReservations() {
                     let valor = parseFloat(reserva.valor_formatado.replace('R$ ', '').replace(/\./g, '').replace(',', '.'));
                     totalPendente += valor;
                 });
-                
+
                 let html = '<ul data-role="listview">';
-                
+
                 // Filtrar reservas confirmadas que ainda não foram assinadas
                 let reservasConfirmadasNaoAssinadas = response.reservations.filter(reserva => reserva.status === 'confirmado' && !reserva.contrato_assinado);
 
@@ -322,9 +337,9 @@ function loadUserReservations() {
                 let reservasConfirmadasComPagamento = response.reservations.filter(reserva => reserva.status === 'confirmado' && reserva.payment_confirmed_at);
 
                 // Separar as reservas que têm tanto pagamento confirmado quanto contrato não assinado
-                let reservasConfirmadasComPagamentoENaoAssinadas = response.reservations.filter(reserva => 
-                    reserva.status === 'confirmado' && 
-                    reserva.payment_confirmed_at && 
+                let reservasConfirmadasComPagamentoENaoAssinadas = response.reservations.filter(reserva =>
+                    reserva.status === 'confirmado' &&
+                    reserva.payment_confirmed_at &&
                     !reserva.contrato_assinado
                 );
 
@@ -445,7 +460,7 @@ function loadUserReservations() {
                     html += '</li>';
                     html += '<li class="divider"><hr></li>'; // Separador
                 }
-                
+
                 // Adicionar botão de pagamento único para todas as reservas pendentes
                 if (reservasPendentes.length >= 1) {
                     html += '<li class="payment-summary-item">';
@@ -554,8 +569,14 @@ function loadUserReservations() {
 
                 html += '</ul>';
                 $('#reservas-list').html(html);
-                // Atualizar o widget do jQuery Mobile
+                // Atualizar o widget do jQuery Mobile e forçar reorganização do layout
                 $('#reservas-list').trigger('create');
+                // Forçar atualização do layout do jQuery Mobile
+                $.mobile.resetActivePageHeight();
+                // Atualizar o footer após carregar o conteúdo
+                setTimeout(function() {
+                    $(document).trigger('updatelayout');
+                }, 100);
             } else {
                 $('#reservas-list').html('<p>Você ainda não possui reservas.</p>');
             }
@@ -567,16 +588,10 @@ function loadUserReservations() {
 }
 
 $(document).on('pageinit', '#suasReservasPageCliente', function() {
-    // Carregar reservas do usuário quando a página for inicializada
-    loadUserReservations();
-});
-
-// Carregar as reservas também quando a página for mostrada (útil para navegação do jQuery Mobile)
-$(document).on('pageinit', '#suasReservasPageCliente', function() {
     // Adicionar manipulador de logout
     $('#logout-link-reservas').on('click', function(e) {
         e.preventDefault();
-        
+
         $.ajax({
             url: '../php/logout.php',
             type: 'POST',
@@ -603,8 +618,14 @@ $(document).on('pageinit', '#suasReservasPageCliente', function() {
 });
 
 $(document).on('pageshow', '#suasReservasPageCliente', function() {
-    // Carregar reservas do usuário novamente ao mostrar a página
+    // Carregar reservas do usuário quando a página é mostrada
     loadUserReservations();
+
+    // Garantir que o footer fique fixo quando a página é mostrada
+    setTimeout(function() {
+        $.mobile.resetActivePageHeight();
+        $(document).trigger('updatelayout');
+    }, 100);
 });
 
 // Adicionar manipulador para o botão "Realizar Pagamento"
@@ -629,6 +650,12 @@ $(document).on('click', '.realizar-pagamento-btn', function() {
 
     // Gerar QR Code PIX para esta reserva específica
     gerarPixParaReserva(reservaId, reservaData, reservaValor);
+
+    // Atualizar o layout após mostrar o modal
+    setTimeout(function() {
+        $.mobile.resetActivePageHeight();
+        $(document).trigger('updatelayout');
+    }, 100);
 });
 
 // Adicionar manipulador para o botão "Pagamento Único"
@@ -656,6 +683,12 @@ $(document).on('click', '.pagamento-unico-btn', function() {
 
     // Gerar QR Code PIX para todas as reservas pendentes
     gerarPixParaVariasReservas(reservasIds, reservasDatas, valorTotal);
+
+    // Atualizar o layout após mostrar o modal
+    setTimeout(function() {
+        $.mobile.resetActivePageHeight();
+        $(document).trigger('updatelayout');
+    }, 100);
 });
 
 // Função para gerar pagamento PIX para reserva específica
@@ -998,6 +1031,12 @@ function closeModal() {
     console.log('Fechando modal do PIX');
     $('#pix-modal-overlay').fadeOut();
     $('#payment-status-indicator').hide();
+
+    // Após fechar o modal, forçar atualização do layout para garantir que o footer fique no lugar correto
+    setTimeout(function() {
+        $.mobile.resetActivePageHeight();
+        $(document).trigger('updatelayout');
+    }, 150);
 }
 
 // Eventos para o modal de pagamento PIX
@@ -1435,7 +1474,7 @@ function escapeHtml(text) {
 </script>
 
 <!-- Modal de Pagamento PIX -->
-<div id="pix-modal-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); z-index: 1000; justify-content: center; align-items: center; padding: 15px; box-sizing: border-box;">
+<div id="pix-modal-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); z-index: 1000; justify-content: center; align-items: center; padding: 15px; box-sizing: border-box; overflow-y: auto;">
     <div id="pix-modal-content" class="card" style="background-color: #34495e; color: white; padding: 25px; max-width: 400px; width: 100%; position: relative;">
         <button id="close-pix-modal" class="ui-btn ui-icon-delete ui-btn-icon-notext" style="position: absolute; top: 5px; right: 5px; background-color: transparent !important; border: none !important; box-shadow: none !important;">Fechar</button>
         <div class="pix-details">
