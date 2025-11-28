@@ -33,7 +33,7 @@ if ($row = $result->fetch_assoc()) {
     echo json_encode($webhook_data, JSON_PRETTY_PRINT) . "\n\n";
     
     echo "Para testar o webhook com dados reais, execute no terminal:\n";
-    echo "curl -k -X POST https://chacararecantodosossegorr.com.br/chacara_kelmy/webhook-mercado-pago.php \\\n";
+    echo "curl -k -X POST https://chacararecantodosossegorr.com.br/repo_limpo/webhook-mercado-pago.php \\\n";
     echo "  -H \"Content-Type: application/json\" \\\n";
     echo "  -H \"User-Agent: MercadoPago IPN v1.0\" \\\n";
     echo "  -d '" . json_encode($webhook_data) . "'\n\n";
@@ -63,7 +63,7 @@ if ($row = $result->fetch_assoc()) {
     echo json_encode($webhook_data, JSON_PRETTY_PRINT) . "\n\n";
     
     echo "Para testar o webhook com dados reais, execute no terminal:\n";
-    echo "curl -k -X POST https://chacararecantodosossegorr.com.br/chacara_kelmy/webhook-mercado-pago.php \\\n";
+    echo "curl -k -X POST https://chacararecantodosossegorr.com.br/repo_limpo/webhook-mercado-pago.php \\\n";
     echo "  -H \"Content-Type: application/json\" \\\n";
     echo "  -H \"User-Agent: MercadoPago IPN v1.0\" \\\n";
     echo "  -d '" . json_encode($webhook_data) . "'\n\n";

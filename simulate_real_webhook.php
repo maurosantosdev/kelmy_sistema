@@ -22,7 +22,7 @@ echo "Simulando webhook com payload:\n";
 echo json_encode($payload, JSON_PRETTY_PRINT) . "\n\n";
 
 // Preparar para enviar via cURL para o webhook
-$url = 'https://chacararecantodosossegorr.com.br/chacara_kelmy/webhook-mercado-pago.php';
+$url = 'https://chacararecantodosossegorr.com.br/repo_limpo/webhook-mercado-pago.php';
 
 $ch = curl_init();
 curl_setopt($ch, CURLOPT_URL, $url);

@@ -118,7 +118,7 @@ if ($stmt->execute()) {
         echo json_encode($response);
     } else {
         // Requisição tradicional - redirecionar
-        header("Location: https://chacararecantodosossegorr.com.br/chacara_kelmy/cliente/reserva.php");
+        header("Location: https://chacararecantodosossegorr.com.br/repo_limpo/cliente/reserva.php");
         exit();
     }
 } else {
@@ -130,7 +130,7 @@ if ($stmt->execute()) {
         echo json_encode($response);
     } else {
         // Requisição tradicional - mostrar erro ou redirecionar de volta
-        header("Location: https://chacararecantodosossegorr.com.br/chacara_kelmy/cliente/cadastro.php?error=" . urlencode($response['message']));
+        header("Location: https://chacararecantodosossegorr.com.br/repo_limpo/cliente/cadastro.php?error=" . urlencode($response['message']));
         exit();
     }
 }

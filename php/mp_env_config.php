@@ -40,14 +40,14 @@ $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
 // Verificar se estamos em ambiente CLI ou Web
 if (php_sapi_name() === 'cli') {
     // Em ambiente CLI, usar a configuração padrão
-    $base_url_path = '/chacara_kelmy';
+    $base_url_path = '/repo_limpo';
 } else {
     // Em ambiente web, obter o caminho base corretamente
-    // O caminho base deve ser baseado na raiz do projeto (chacara_kelmy), não no diretório do script
+    // O caminho base deve ser baseado na raiz do projeto (repo_limpo), não no diretório do script
     $script_dir = dirname($_SERVER['SCRIPT_NAME']);
-    if (strpos($script_dir, '/chacara_kelmy') === 0) {
-        // Se o script estiver em um subdiretório de chacara_kelmy, manter apenas chacara_kelmy
-        $base_url_path = '/chacara_kelmy';
+    if (strpos($script_dir, '/repo_limpo') === 0) {
+        // Se o script estiver em um subdiretório de repo_limpo, manter apenas repo_limpo
+        $base_url_path = '/repo_limpo';
     } else {
         // Caso contrário, usar o dirname normal
         $base_url_path = $script_dir !== '/' ? $script_dir : '';

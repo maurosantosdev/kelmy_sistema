@@ -135,7 +135,7 @@ $(document).on('pageinit', '#cadastroPageCliente', function() {
                         confirmButtonText: 'OK'
                     }).then(function() {
                         // Redirecionar para a página de reservas
-                        window.location.href = 'https://chacararecantodosossegorr.com.br/chacara_kelmy/cliente/reserva.php';
+                        window.location.href = 'https://chacararecantodosossegorr.com.br/repo_limpo/cliente/reserva.php';
                     });
                 } else {
                     console.log('Erro no cadastro:', response.message);

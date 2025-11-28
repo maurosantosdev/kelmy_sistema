@@ -71,7 +71,7 @@ No painel do Mercado Pago, configure:
 
 ### 10. Estrutura de Arquivos
 ```
-/chacara_kelmy/
+/repo_limpo/
 ├── /php/
 │   ├── mp_config.php          # Configurações do Mercado Pago
 │   ├── mp_init.php            # Inicialização do SDK

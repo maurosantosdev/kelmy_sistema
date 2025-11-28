@@ -3,7 +3,7 @@
 session_start();
 if (isset($_SESSION['user_id'])) {
     // Se o usuário já estiver logado, redirecionar para a página de reserva
-    header("Location: https://chacararecantodosossegorr.com.br/chacara_kelmy/cliente/reserva.php");
+    header("Location: https://chacararecantodosossegorr.com.br/repo_limpo/cliente/reserva.php");
     exit();
 }
 ?>

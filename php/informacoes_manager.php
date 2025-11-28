@@ -18,7 +18,7 @@ if (!isset($_SESSION['admin_logged_in']) || $_SESSION['admin_logged_in'] !== tru
 }
 
 $action = $_GET['action'] ?? '';
-$upload_dir = $_SERVER['DOCUMENT_ROOT'] . '/chacara_kelmy/uploads/';
+$upload_dir = $_SERVER['DOCUMENT_ROOT'] . '/repo_limpo/uploads/';
 
 // --- ESTRUTURA LÓGICA PRINCIPAL COM IF/ELSEIF/ELSE ---
 

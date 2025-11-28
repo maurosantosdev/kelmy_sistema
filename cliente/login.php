@@ -5,7 +5,7 @@ if (session_status() == PHP_SESSION_NONE) {
 }
 if (isset($_SESSION['user_id'])) {
     // Se o usuário já estiver logado, redirecionar para a página de reserva
-    header("Location: https://chacararecantodosossegorr.com.br/chacara_kelmy/cliente/reserva.php");
+    header("Location: https://chacararecantodosossegorr.com.br/repo_limpo/cliente/reserva.php");
     exit();
 }
 
@@ -40,7 +40,7 @@ if (isset($_GET['email_login']) && isset($_GET['senha_login'])) {
                 $_SESSION['user_name'] = $user['nome'];
                 
                 // Redirecionar para a página de reserva com um parâmetro para limpar a URL
-                header("Location: https://chacararecantodosossegorr.com.br/chacara_kelmy/cliente/reserva.php?login=success");
+                header("Location: https://chacararecantodosossegorr.com.br/repo_limpo/cliente/reserva.php?login=success");
                 exit();
             }
         }

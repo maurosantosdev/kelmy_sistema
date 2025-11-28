@@ -30,7 +30,7 @@ No painel do Mercado Pago:
 
 1. Na seção de Webhooks, informe a URL:
    ```
-   https://chacararecantodosossegorr.com.br/chacara_kelmy/webhook-mercado-pago.php
+   https://chacararecantodosossegorr.com.br/repo_limpo/webhook-mercado-pago.php
    ```
 2. Certifique-se de que os eventos de pagamento estejam selecionados:
    - payment.created
@@ -53,7 +53,7 @@ No painel do Mercado Pago:
 - Verifique se o domínio está acessível publicamente
 - Confirme que SSL/TLS está configurado corretamente
 - Verifique se a URL no painel do Mercado Pago está exatamente como:
-  `https://chacararecantodosossegorr.com.br/chacara_kelmy/webhook-mercado-pago.php`
+  `https://chacararecantodosossegorr.com.br/repo_limpo/webhook-mercado-pago.php`
 
 #### Assinatura inválida:
 

@@ -12,13 +12,13 @@ $(document).on('pageinit', '#loginPage', function() {
         var submitBtn = $('#submitBtn').prop('disabled', true).text('Autenticando...');
         $('#errorMessage').text('');
         $.ajax({
-            url: '/chacara_kelmy/php/admin_login.php',
+            url: '/repo_limpo/php/admin_login.php',
             type: 'POST',
             data: $(this).serialize(),
             dataType: 'json',
             success: function(response) {
                 if (response.success) {
-                    window.location.href = '/chacara_kelmy/admin/agenda.html';
+                    window.location.href = '/repo_limpo/admin/agenda.html';
                 } else {
                     $('#errorMessage').text(response.message);
                 }
@@ -66,7 +66,7 @@ $(document).on('pageinit', '#agendaPage', function() {
     function agendaLoadMonthPrices(date) {
         const month = date.getMonth() + 1, year = date.getFullYear();
         $.ajax({
-            url: `/chacara_kelmy/php/agenda_manager.php?action=get_month&month=${month}&year=${year}`,
+            url: `/repo_limpo/php/agenda_manager.php?action=get_month&month=${month}&year=${year}`,
             type: 'GET',
             dataType: 'json',
             success: function(response) {
@@ -74,7 +74,7 @@ $(document).on('pageinit', '#agendaPage', function() {
                     agendaRenderCalendar(date, response.prices);
                 } else if (response && response.message === 'Acesso não autorizado.') {
                     alert('Sua sessão expirou. Por favor, faça o login novamente.');
-                    window.location.href = '/chacara_kelmy/admin/';
+                    window.location.href = '/repo_limpo/admin/';
                 }
             },
             error: function() { alert('Erro de comunicação ao carregar dados do calendário.'); }
@@ -88,7 +88,7 @@ $(document).on('pageinit', '#agendaPage', function() {
         e.preventDefault();
         var formMsg = $('#formMessage').text('Salvando...').css('color', 'white');
         $.ajax({
-            url: '/chacara_kelmy/php/agenda_manager.php?action=save_period',
+            url: '/repo_limpo/php/agenda_manager.php?action=save_period',
             type: 'POST',
             data: $(this).serialize(),
             dataType: 'json',
@@ -105,7 +105,7 @@ $(document).on('pageinit', '#agendaPage', function() {
         const formattedDate = new Date(dateToDelete + 'T00:00:00').toLocaleDateString('pt-BR');
         if (confirm(`Tem certeza que deseja remover o preço do dia ${formattedDate}?`)) {
             $.ajax({
-                url: '/chacara_kelmy/php/agenda_manager.php?action=delete_date',
+                url: '/repo_limpo/php/agenda_manager.php?action=delete_date',
                 type: 'POST',
                 data: { date: dateToDelete },
                 dataType: 'json',
@@ -130,9 +130,9 @@ $(document).on('pageinit', '#infoPage', function() {
         let mediaElement;
         const extension = filename.split('.').pop().toLowerCase();
         if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(extension)) {
-            mediaElement = `<img src="/chacara_kelmy/uploads/${filename}" alt="Mídia Salva">`;
+            mediaElement = `<img src="/repo_limpo/uploads/${filename}" alt="Mídia Salva">`;
         } else if (extension === 'mp4') {
-            mediaElement = `<video src="/chacara_kelmy/uploads/${filename}" muted loop playsinline controls></video>`;
+            mediaElement = `<video src="/repo_limpo/uploads/${filename}" muted loop playsinline controls></video>`;
         } else {
             return;
         }
@@ -154,7 +154,7 @@ $(document).on('pageinit', '#infoPage', function() {
     function loadInfoData() {
         $('#image-preview-container').empty();
         $.ajax({
-            url: '/chacara_kelmy/php/informacoes_manager.php?action=get_info',
+            url: '/repo_limpo/php/informacoes_manager.php?action=get_info',
             type: 'GET',
             dataType: 'json',
             success: function(response) {
@@ -209,7 +209,7 @@ $(document).on('pageinit', '#infoPage', function() {
         formData.append('order', JSON.stringify(newOrder));
 
         $.ajax({
-            url: '/chacara_kelmy/php/informacoes_manager.php?action=save_info',
+            url: '/repo_limpo/php/informacoes_manager.php?action=save_info',
             type: 'POST',
             data: formData,
             processData: false,
@@ -238,7 +238,7 @@ $(document).on('pageinit', '#infoPage', function() {
         const card = $(this).closest('.image-card');
         if (confirm(`Tem certeza que deseja excluir esta mídia?`)) {
             $.ajax({
-                url: '/chacara_kelmy/php/informacoes_manager.php?action=delete_image',
+                url: '/repo_limpo/php/informacoes_manager.php?action=delete_image',
                 type: 'POST',
                 data: { filename: filename },
                 dataType: 'json',
@@ -265,7 +265,7 @@ $(document).on('pageshow', '#contratoPage', function() {
     function loadContractData() {
         console.log('Carregando dados do contrato');
         $.ajax({
-            url: '/chacara_kelmy/php/contrato_manager.php?action=get_contract',
+            url: '/repo_limpo/php/contrato_manager.php?action=get_contract',
             type: 'GET',
             dataType: 'json',
             success: function(response) {
@@ -388,7 +388,7 @@ $(document).on('pageshow', '#contratoPage', function() {
 
         // Enviar atualização para o servidor
         $.ajax({
-            url: '/chacara_kelmy/php/contrato_manager.php?action=update_item',
+            url: '/repo_limpo/php/contrato_manager.php?action=update_item',
             type: 'POST',
             data: {
                 id: id,
@@ -459,7 +459,7 @@ $(document).on('pageshow', '#contratoPage', function() {
         }).then((result) => {
             if (result.isConfirmed) {
                 $.ajax({
-                    url: '/chacara_kelmy/php/contrato_manager.php?action=delete_contract_item',
+                    url: '/repo_limpo/php/contrato_manager.php?action=delete_contract_item',
                     type: 'POST',
                     data: { id: id },
                     dataType: 'json',
@@ -524,7 +524,7 @@ $(document).on('pageshow', '#contratoPage', function() {
 
         // Enviar novo item para o servidor
         $.ajax({
-            url: '/chacara_kelmy/php/contrato_manager.php?action=save_new_item',
+            url: '/repo_limpo/php/contrato_manager.php?action=save_new_item',
             type: 'POST',
             data: {
                 descricao: descricao,
@@ -669,7 +669,7 @@ $(document).on('pageshow', '#contratoPage', function() {
         
         // Enviar novo item para o servidor
         $.ajax({
-            url: '/chacara_kelmy/php/contrato_manager.php?action=save_new_item',
+            url: '/repo_limpo/php/contrato_manager.php?action=save_new_item',
             type: 'POST',
             data: {
                 descricao: descricao,
@@ -796,7 +796,7 @@ $(document).on('pageshow', '#contratoPage', function() {
         
         // Enviar atualização para o servidor
         $.ajax({
-            url: '/chacara_kelmy/php/contrato_manager.php?action=update_item',
+            url: '/repo_limpo/php/contrato_manager.php?action=update_item',
             type: 'POST',
             data: {
                 id: parseInt(id),
@@ -851,7 +851,7 @@ $(document).on('pageshow', '#contratoPage', function() {
     function editContractItem(id) {
         // Carregar os dados do item para edição
         $.ajax({
-            url: '/chacara_kelmy/php/contrato_manager.php?action=get_contract',
+            url: '/repo_limpo/php/contrato_manager.php?action=get_contract',
             type: 'GET',
             dataType: 'json',
             success: function(response) {
@@ -915,10 +915,10 @@ $(document).on('click', '#logoutBtn', function(e) {
     e.preventDefault();
     if (confirm('Tem certeza que deseja sair?')) {
         $.ajax({
-            url: '/chacara_kelmy/php/agenda_manager.php?action=logout',
+            url: '/repo_limpo/php/agenda_manager.php?action=logout',
             type: 'GET',
             success: function() {
-                window.location.href = '/chacara_kelmy/admin/';
+                window.location.href = '/repo_limpo/admin/';
             }
         });
     }

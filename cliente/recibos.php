@@ -90,7 +90,7 @@ try {
     // Gerar o conteúdo HTML do recibo para converter para PDF
 
     // Debug: verificar se a imagem existe
-    $debug_img_path = $_SERVER['DOCUMENT_ROOT'] . '/chacararecantodosossegorr.com.br/chacara_kelmy/assets/imagens/logo.jpeg';
+    $debug_img_path = $_SERVER['DOCUMENT_ROOT'] . '/chacararecantodosossegorr.com.br/repo_limpo/assets/imagens/logo.jpeg';
     if (!file_exists($debug_img_path)) {
         error_log("Imagem de marca d'água não encontrada: " . $debug_img_path);
         // Tentar caminho relativo
@@ -416,7 +416,7 @@ try {
 
             // Adicionar marca d'água após adicionar a página, mas antes do conteúdo
             // Tenta carregar o arquivo de imagem e converter para base64 para garantir que funcione
-            $watermark_path = $_SERVER['DOCUMENT_ROOT'] . '/chacararecantodosossegorr.com.br/chacara_kelmy/assets/imagens/logo.jpeg';
+            $watermark_path = $_SERVER['DOCUMENT_ROOT'] . '/chacararecantodosossegorr.com.br/repo_limpo/assets/imagens/logo.jpeg';
 
             // Se o caminho acima não funcionar, tentar outros formatos
             if (!file_exists($watermark_path)) {
@@ -425,7 +425,7 @@ try {
 
             if (!file_exists($watermark_path)) {
                 // Último fallback - tentar logo_cima.jpeg
-                $watermark_path = $_SERVER['DOCUMENT_ROOT'] . '/chacararecantodosossegorr.com.br/chacara_kelmy/assets/imagens/logo_cima.jpeg';
+                $watermark_path = $_SERVER['DOCUMENT_ROOT'] . '/chacararecantodosossegorr.com.br/repo_limpo/assets/imagens/logo_cima.jpeg';
             }
 
             if (!file_exists($watermark_path)) {

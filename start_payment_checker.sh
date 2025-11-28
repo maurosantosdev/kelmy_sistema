@@ -3,7 +3,7 @@
 # Script para iniciar o serviço de verificação de pagamentos
 # Este script pode ser adicionado ao crontab para iniciar automaticamente após reinicialização
 
-cd /var/www/chacararecantodosossegorr.com.br/chacara_kelmy
+cd /var/www/chacararecantodosossegorr.com.br/repo_limpo
 
 # Verificar se o processo já está rodando
 if pgrep -f "php payment_check_service.php" > /dev/null

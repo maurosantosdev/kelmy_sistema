@@ -86,12 +86,12 @@ $(document).on('pageinit', '#loginPageCliente', function() {
                                     // Redirecionar para a página de reservas (usando replace para evitar histórico de parâmetros)
                                     console.log("Login bem-sucedido, redirecionando para reserva.php");
                                     // Limpar parâmetros da URL antes de redirecionar
-                                    window.location.replace('https://chacararecantodosossegorr.com.br/chacara_kelmy/cliente/reserva.php');
+                                    window.location.replace('https://chacararecantodosossegorr.com.br/repo_limpo/cliente/reserva.php');
                                 }
                             });
                         } else {
                             alert(response.message);
-                            window.location.replace('https://chacararecantodosossegorr.com.br/chacara_kelmy/cliente/reserva.php');
+                            window.location.replace('https://chacararecantodosossegorr.com.br/repo_limpo/cliente/reserva.php');
                         }
                     }
                 } else {

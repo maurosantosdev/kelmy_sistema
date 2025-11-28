@@ -36,7 +36,7 @@ if (isset($_SESSION['user_id'])) {
         echo json_encode($response);
     } else {
         // Requisição tradicional - redirecionar para suas_reservas.php
-        header("Location: https://chacararecantodosossegorr.com.br/chacara_kelmy/cliente/suas_reservas.php");
+        header("Location: https://chacararecantodosossegorr.com.br/repo_limpo/cliente/suas_reservas.php");
         exit();
     }
     exit;
@@ -92,7 +92,7 @@ if ($result->num_rows === 0) {
             echo json_encode($response);
         } else {
             // Requisição tradicional - redirecionar
-            header("Location: https://chacararecantodosossegorr.com.br/chacara_kelmy/cliente/suas_reservas.php");
+            header("Location: https://chacararecantodosossegorr.com.br/repo_limpo/cliente/suas_reservas.php");
             exit();
         }
     } else {
@@ -106,7 +106,7 @@ if ($result->num_rows === 0) {
             echo json_encode($response);
         } else {
             // Requisição tradicional - redirecionar de volta para login com erro
-            header("Location: https://chacararecantodosossegorr.com.br/chacara_kelmy/cliente/login.php?error=1");
+            header("Location: https://chacararecantodosossegorr.com.br/repo_limpo/cliente/login.php?error=1");
             exit();
         }
     }

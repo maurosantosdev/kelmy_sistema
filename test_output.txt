@@ -1,7 +1,7 @@
 [Wed Nov 12 14:20:13 2025] PHP 8.2.29 Development Server (http://localhost:8000) started
 [Wed Nov 12 14:20:13 2025] [::1]:37974 Accepted
-[Wed Nov 12 14:20:13 2025] PHP Warning:  Cannot modify header information - headers already sent by (output started at /var/www/chacararecantodosossegorr.com.br/chacara_kelmy/test_receipt.php:11) in /var/www/chacararecantodosossegorr.com.br/chacara_kelmy/php/generate_receipt.php on line 28
+[Wed Nov 12 14:20:13 2025] PHP Warning:  Cannot modify header information - headers already sent by (output started at /var/www/chacararecantodosossegorr.com.br/repo_limpo/test_receipt.php:11) in /var/www/chacararecantodosossegorr.com.br/repo_limpo/php/generate_receipt.php on line 28
 [Wed Nov 12 14:20:13 2025] [::1]:37974 Closing
 [Wed Nov 12 14:39:30 2025] [::1]:35294 Accepted
-[Wed Nov 12 14:39:30 2025] PHP Warning:  Cannot modify header information - headers already sent by (output started at /var/www/chacararecantodosossegorr.com.br/chacara_kelmy/test_receipt.php:11) in /var/www/chacararecantodosossegorr.com.br/chacara_kelmy/php/generate_receipt.php on line 28
+[Wed Nov 12 14:39:30 2025] PHP Warning:  Cannot modify header information - headers already sent by (output started at /var/www/chacararecantodosossegorr.com.br/repo_limpo/test_receipt.php:11) in /var/www/chacararecantodosossegorr.com.br/repo_limpo/php/generate_receipt.php on line 28
 [Wed Nov 12 14:39:30 2025] [::1]:35294 Closing

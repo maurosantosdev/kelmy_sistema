@@ -875,7 +875,7 @@ if (isset($num_diarias_to_display)) {
                 </div>
                 <?php endif; ?>
 
-                <?php if(!$contrato_assinado): ?>
+                <?php if($contrato_assinado): ?>
                 <!-- Mensagem de contrato já assinado -->
                 <?php if ($reserva_id_fornecido): ?>
                 <div class="alert alert-info">

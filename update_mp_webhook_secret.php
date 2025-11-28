@@ -29,5 +29,5 @@ file_put_contents($config_file, $new_content);
 echo "Chave secreta do webhook atualizada com sucesso!\n";
 echo "Novo Webhook Secret configurado: {$webhook_secret}\n";
 echo "\nLembre-se de também configurar a URL do webhook no painel do Mercado Pago:\n";
-echo "https://chacararecantodosossegorr.com.br/chacara_kelmy/webhook-mercado-pago.php\n";
+echo "https://chacararecantodosossegorr.com.br/repo_limpo/webhook-mercado-pago.php\n";
 ?>
