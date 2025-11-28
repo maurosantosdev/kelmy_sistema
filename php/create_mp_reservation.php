@@ -309,15 +309,18 @@ try {
             throw new Exception("Erro ao atualizar status da agenda para {$date}");
         }
         
+        // Generate a random group identifier for all reservations (single or multiple days)
+        $reserva_grupo = bin2hex(random_bytes(8));
+
         // Obter o ID da reserva que foi gerado anteriormente e usado no external_reference
         $reservation_id = array_shift($reservation_ids);
-        
+
         // Salvar a reserva no banco com status pendente
-        $insert = $conn->prepare("INSERT INTO reservas (id, user_id, data, valor, status, observacoes, created_at, payment_percentage, tipo_porcentagem) VALUES (?, ?, ?, ?, ?, ?, NOW(), ?, ?)");
+        $insert = $conn->prepare("INSERT INTO reservas (id, user_id, data, valor, status, observacoes, created_at, payment_percentage, tipo_porcentagem, reserva_grupo) VALUES (?, ?, ?, ?, ?, ?, NOW(), ?, ?, ?)");
         $status = 'pendente';
         $tipo_porcentagem = strval($payment_percentage);
-        $insert->bind_param("ssssssss", $reservation_id, $_SESSION['user_id'], $date, $preco, $status, $observacoes, $payment_percentage, $tipo_porcentagem);
-        
+        $insert->bind_param("sssssssss", $reservation_id, $_SESSION['user_id'], $date, $preco, $status, $observacoes, $payment_percentage, $tipo_porcentagem, $reserva_grupo);
+
         if (!$insert->execute()) {
             throw new Exception("Erro ao salvar reserva no banco para {$date}");
         }

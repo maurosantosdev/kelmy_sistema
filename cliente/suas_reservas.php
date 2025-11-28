@@ -16,7 +16,7 @@ if (!isset($_SESSION['user_id'])) {
     <title>Suas Reservas - Chácara Recanto do Sossego</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    
+
     <link rel="stylesheet" href="../assets/css/jquery.mobile-1.4.5.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
@@ -330,22 +330,10 @@ function loadUserReservations() {
 
                 let html = '<ul data-role="listview">';
 
-                // Filtrar reservas confirmadas que ainda não foram assinadas
-                let reservasConfirmadasNaoAssinadas = response.reservations.filter(reserva => reserva.status === 'confirmado' && !reserva.contrato_assinado);
-
-                // Filtrar reservas confirmadas com pagamento confirmado para emitir recibos
-                let reservasConfirmadasComPagamento = response.reservations.filter(reserva => reserva.status === 'confirmado' && reserva.payment_confirmed_at);
-
-                // Separar as reservas que têm tanto pagamento confirmado quanto contrato não assinado
-                let reservasConfirmadasComPagamentoENaoAssinadas = response.reservations.filter(reserva =>
-                    reserva.status === 'confirmado' &&
-                    reserva.payment_confirmed_at &&
-                    !reserva.contrato_assinado
-                );
-
-                // Ordenar por data em ordem crescente (mais antiga primeiro) com tratamento de erro
+                // Agora, vamos ordenar todas as reservas por data
+                let todasReservas = response.reservations;
                 try {
-                    reservasConfirmadasNaoAssinadas.sort((a, b) => {
+                    todasReservas.sort((a, b) => {
                         if (a.data_reserva && b.data_reserva) {
                             const [dayA, monthA, yearA] = a.data_reserva.split('/');
                             const [dayB, monthB, yearB] = b.data_reserva.split('/');
@@ -356,214 +344,125 @@ function loadUserReservations() {
                         return 0;
                     });
                 } catch (e) {
-                    console.error('Erro ao ordenar reservas não assinadas:', e);
+                    console.error('Erro ao ordenar todas as reservas:', e);
                 }
 
-                // Agrupar todas as reservas confirmadas que ainda não têm contrato assinado (com ou sem pagamento confirmado)
-                let reservasNaoAssinadas = response.reservations.filter(reserva =>
-                    reserva.status === 'confirmado' && !reserva.contrato_assinado
-                );
 
-                // Ordenar por data em ordem crescente (mais antiga primeiro) com tratamento de erro
-                try {
-                    reservasNaoAssinadas.sort((a, b) => {
-                        if (a.data_reserva && b.data_reserva) {
-                            const [dayA, monthA, yearA] = a.data_reserva.split('/');
-                            const [dayB, monthB, yearB] = b.data_reserva.split('/');
-                            const dateA = new Date(`${yearA}-${monthA}-${dayA}`);
-                            const dateB = new Date(`${yearB}-${monthB}-${dayB}`);
-                            return dateA - dateB;
+                // Agrupar todas as reservas por ID de pagamento (mp_payment_id) do Mercado Pago
+                let gruposPorPagamento = [];
+                let gruposProcessados = new Set();
+
+                // Primeiro, agrupar as reservas que têm o mesmo mp_payment_id
+                for (let i = 0; i < todasReservas.length; i++) {
+                    const reserva = todasReservas[i];
+
+                    // Se a reserva tem um pagamento associado e ainda não foi processada
+                    if (reserva.mp_payment_id && !gruposProcessados.has(reserva.mp_payment_id)) {
+                        // Encontrar todas as reservas com o mesmo ID de pagamento
+                        const reservasMesmoPagamento = todasReservas.filter(r => r.mp_payment_id === reserva.mp_payment_id);
+
+                        if (reservasMesmoPagamento.length > 0) {
+                            gruposPorPagamento.push(reservasMesmoPagamento);
+                            gruposProcessados.add(reserva.mp_payment_id);
                         }
-                        return 0;
-                    });
-                } catch (e) {
-                    console.error('Erro ao ordenar reservas não assinadas:', e);
-                }
-
-                if (reservasNaoAssinadas.length >= 1) {
-                    html += '<li class="payment-summary-item">';
-                    html += '<h3>Contratos Não Assinados</h3>';
-                    html += '<p><strong>Quantidade:</strong> ' + reservasNaoAssinadas.length + ' contrato' + (reservasNaoAssinadas.length > 1 ? 's' : '') + ' não assinado' + (reservasNaoAssinadas.length > 1 ? 's' : '') + '</p>';
-
-                    // Adicionar detalhes das reservas
-                    reservasNaoAssinadas.forEach(function(reserva) {
-                        html += '<div style="margin: 5px 0; padding: 8px; background-color: #f8f9fa; border-radius: 4px; border-left: 3px solid #007bff;">';
-                        html += '<p><strong>Reserva para:</strong> ' + reserva.data_formatada + '</p>';
-                        html += '<p><strong>Status:</strong> ' + reserva.status_formatado + '</p>';
-                        if(reserva.payment_confirmed_at) {
-                            html += '<p><strong>Data de Confirmação:</strong> ' + new Date(reserva.payment_confirmed_at).toLocaleString('pt-BR') + '</p>';
-                        }
-                        html += '<p><strong>Valor:</strong> ' + reserva.valor_formatado + '</p>';
-                        if(reserva.observacoes) {
-                            html += '<p><strong>Observações:</strong> ' + escapeHtml(reserva.observacoes) + '</p>';
-                        }
-                        html += '</div>';
-                    });
-
-                    html += '<div class="button-container" style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px;">';
-                    // Botão de emissão de recibo para reservas com pagamento confirmado
-                    let reservasComPagamento = reservasNaoAssinadas.filter(r => r.payment_confirmed_at);
-                    if (reservasComPagamento.length >= 1) {
-                        html += '<button class="btn btn-primary btn-lg emitir-todos-recibos-btn" style="color: white; flex: 1; min-width: 150px;" data-reservas-ids=\'' + JSON.stringify(reservasComPagamento.map(r => r.id)) + '\' data-reservas-datas=\'' + JSON.stringify(reservasComPagamento.map(r => r.data_formatada)) + '\' data-reservas-valores=\'' + JSON.stringify(reservasComPagamento.map(r => r.valor_formatado)) + '\'>' + (reservasComPagamento.length > 1 ? 'Emitir Recibo(s)' : 'Emitir Recibo') + '</button>';
                     }
-                    html += '<button class="btn btn-info btn-lg assinar-todos-btn" style="color: white; flex: 1; min-width: 150px;" data-reservas-ids=\'' + JSON.stringify(reservasNaoAssinadas.map(r => r.id)) + '\' data-reservas-datas=\'' + JSON.stringify(reservasNaoAssinadas.map(r => r.data_formatada)) + '\'>' + (reservasNaoAssinadas.length > 1 ? 'Assinar Contrato(s)' : 'Assinar Contrato') + '</button>';
-                    html += '</div>';
-                    html += '</li>';
-                    html += '<li class="divider"><hr></li>'; // Separador
                 }
 
-                // Agrupar todas as reservas confirmadas que já têm contrato assinado
-                let reservasAssinadas = response.reservations.filter(reserva =>
-                    reserva.status === 'confirmado' && reserva.contrato_assinado
-                );
-
-                // Ordenar por data em ordem crescente (mais antiga primeiro) com tratamento de erro
-                try {
-                    reservasAssinadas.sort((a, b) => {
-                        if (a.data_reserva && b.data_reserva) {
-                            const [dayA, monthA, yearA] = a.data_reserva.split('/');
-                            const [dayB, monthB, yearB] = b.data_reserva.split('/');
-                            const dateA = new Date(`${yearA}-${monthA}-${dayA}`);
-                            const dateB = new Date(`${yearB}-${monthB}-${dayB}`);
-                            return dateA - dateB;
-                        }
-                        return 0;
-                    });
-                } catch (e) {
-                    console.error('Erro ao ordenar reservas assinadas:', e);
-                }
-
-                if (reservasAssinadas.length >= 1) {
-                    html += '<li class="payment-summary-item">';
-                    html += '<h3>Contratos Assinados</h3>';
-                    html += '<p><strong>Quantidade:</strong> ' + reservasAssinadas.length + ' contrato' + (reservasAssinadas.length > 1 ? 's' : '') + ' assinado' + (reservasAssinadas.length > 1 ? 's' : '') + '</p>';
-
-                    // Adicionar detalhes das reservas
-                    reservasAssinadas.forEach(function(reserva) {
-                        html += '<div style="margin: 5px 0; padding: 8px; background-color: #f8f9fa; border-radius: 4px; border-left: 3px solid #007bff;">';
-                        html += '<p><strong>Reserva para:</strong> ' + reserva.data_formatada + '</p>';
-                        html += '<p><strong>Status:</strong> ' + reserva.status_formatado + '</p>';
-                        if(reserva.payment_confirmed_at) {
-                            html += '<p><strong>Data de Confirmação:</strong> ' + new Date(reserva.payment_confirmed_at).toLocaleString('pt-BR') + '</p>';
-                        }
-                        html += '<p><strong>Valor:</strong> ' + reserva.valor_formatado + '</p>';
-                        if(reserva.observacoes) {
-                            html += '<p><strong>Observações:</strong> ' + escapeHtml(reserva.observacoes) + '</p>';
-                        }
-                        html += '</div>';
-                    });
-
-                    html += '<div class="button-container" style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px;">';
-                    html += '<button class="btn btn-primary btn-lg emitir-todos-recibos-btn" style="color: white; flex: 1; min-width: 150px;" data-reservas-ids=\'' + JSON.stringify(reservasAssinadas.map(r => r.id)) + '\' data-reservas-datas=\'' + JSON.stringify(reservasAssinadas.map(r => r.data_formatada)) + '\' data-reservas-valores=\'' + JSON.stringify(reservasAssinadas.map(r => r.valor_formatado)) + '\'>' + (reservasAssinadas.length > 1 ? 'Emitir Recibo(s)' : 'Emitir Recibo') + '</button>';
-                    html += '<button class="btn btn-warning btn-lg ver-contrato-todos-btn" style="color: white; flex: 1; min-width: 150px;" data-reservas-ids=\'' + JSON.stringify(reservasAssinadas.map(r => r.id)) + '\'>' + (reservasAssinadas.length > 1 ? 'Ver Contrato(s)' : 'Ver Contrato') + '</button>';
-                    html += '</div>';
-                    html += '</li>';
-                    html += '<li class="divider"><hr></li>'; // Separador
-                }
-
-                // Adicionar botão de pagamento único para todas as reservas pendentes
-                if (reservasPendentes.length >= 1) {
-                    html += '<li class="payment-summary-item">';
-                    html += '<h3>Pagamento' + (reservasPendentes.length > 1 ? ' Total' : '') + '</h3>';
-                    html += '<p><strong>Valor Total:</strong> R$ ' + totalPendente.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</p>';
-                    html += '<p><strong>Quantidade:</strong> ' + reservasPendentes.length + ' reserva' + (reservasPendentes.length > 1 ? 's' : '') + ' pendente' + (reservasPendentes.length > 1 ? 's' : '') + '</p>';
-
-                    // Adicionar detalhes das reservas
-                    reservasPendentes.forEach(function(reserva) {
-                        html += '<div style="margin: 5px 0; padding: 8px; background-color: #f8f9fa; border-radius: 4px; border-left: 3px solid #28a745;">';
-                        html += '<p><strong>Reserva para:</strong> ' + reserva.data_formatada + '</p>';
-                        html += '<p><strong>Status:</strong> ' + reserva.status_formatado + '</p>';
-                        html += '<p><strong>Valor:</strong> ' + reserva.valor_formatado + '</p>';
-                        if(reserva.observacoes) {
-                            html += '<p><strong>Observações:</strong> ' + escapeHtml(reserva.observacoes) + '</p>';
-                        }
-                        html += '</div>';
-                    });
-
-                    html += '<div class="button-container" style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px;">';
-                    html += '<button class="btn btn-success btn-lg pagamento-unico-btn" style="color: white; flex: 1; min-width: 150px;" data-reservas-ids=\'' + JSON.stringify(reservasPendentes.map(r => r.id)) + '\' data-reservas-datas=\'' + JSON.stringify(reservasPendentes.map(r => r.data_formatada)) + '\' data-valor-total="' + totalPendente + '">' + (reservasPendentes.length > 1 ? 'Pagar Todas (' + reservasPendentes.length + ')' : 'Realizar Pagamento') + '</button>';
-                    html += '</div>';
-                    html += '</li>';
-                    html += '<li class="divider"><hr></li>'; // Separador
-                }
-
-                // Filtrar reservas individuais que não fazem parte dos grupos anteriores
-                // (não pendentes, não confirmadas como não assinadas, não confirmadas como assinadas)
-                // As reservas individuais incluem aquelas que não estão nas seções agrupadas acima
-                let todasReservasAgrupadasIds = new Set();
-
-                // Adicionar IDs das reservas pendentes
-                reservasPendentes.forEach(r => todasReservasAgrupadasIds.add(r.id));
-
-                // Adicionar IDs das reservas não assinadas (agora agrupadas)
-                reservasNaoAssinadas.forEach(r => todasReservasAgrupadasIds.add(r.id));
-
-                // Adicionar IDs das reservas assinadas (agora agrupadas)
-                reservasAssinadas.forEach(r => todasReservasAgrupadasIds.add(r.id));
-
-                let reservasIndividuais = response.reservations.filter(reserva => {
-                    return !todasReservasAgrupadasIds.has(reserva.id);
+                // Depois, adicionar reservas que não têm pagamento associado como grupos individuais
+                todasReservas.forEach(reserva => {
+                    if (!reserva.mp_payment_id) {
+                        gruposPorPagamento.push([reserva]);
+                    }
                 });
 
-                // Ordenar reservas individuais por data (mais antiga primeiro)
-                try {
-                    reservasIndividuais.sort((a, b) => {
-                        if (a.data_reserva && b.data_reserva) {
-                            const [dayA, monthA, yearA] = a.data_reserva.split('/');
-                            const [dayB, monthB, yearB] = b.data_reserva.split('/');
-                            const dateA = new Date(`${yearA}-${monthA}-${dayA}`);
-                            const dateB = new Date(`${yearB}-${monthB}-${dayB}`);
-                            return dateA - dateB;
+                // Exibir cada grupo como um pagamento/contrato diferente
+                gruposPorPagamento.forEach(function(grupo) {
+                    if (grupo.length > 0) {
+                        // Calcular o valor total para este grupo (contrato)
+                        let grupoTotal = 0;
+                        grupo.forEach(function(reserva) {
+                            if (reserva.valor_formatado) {
+                                let valor = parseFloat(reserva.valor_formatado.replace('R$ ', '').replace(/\./g, '').replace(',', '.'));
+                                if (!isNaN(valor)) {
+                                    grupoTotal += valor;
+                                }
+                            }
+                        });
+
+                        // Determinar o status principal do grupo (priorizando pendente > confirmado > cancelado)
+                        const statuses = grupo.map(r => r.status);
+                        let grupoStatus = 'outro';
+                        if (statuses.includes('pendente')) {
+                            grupoStatus = 'pendente';
+                        } else if (statuses.includes('confirmado')) {
+                            grupoStatus = 'confirmado';
+                        } else if (statuses.includes('cancelado')) {
+                            grupoStatus = 'cancelado';
                         }
-                        return 0;
-                    });
-                } catch (e) {
-                    console.error('Erro ao ordenar reservas individuais:', e);
-                }
 
-                // Exibir reservas individuais com botões lado a lado
-                reservasIndividuais.forEach(function(reserva) {
-                    html += '<li>';
-                    html += '<h3>Reserva para ' + reserva.data_formatada + '</h3>';
-                    html += '<p><strong>Status:</strong> <span class="status-badge status-' + reserva.status + '">' + reserva.status_formatado + '</span></p>';
-                    if(reserva.payment_confirmed_at) {
-                        html += '<p><strong>Data de Confirmação:</strong> ' + new Date(reserva.payment_confirmed_at).toLocaleString('pt-BR') + '</p>';
+                        // Verificar se todas as reservas do grupo estão assinadas
+                        const todasAssinadas = grupo.every(r => r.contrato_assinado);
+                        const todasComPagamento = grupo.every(r => r.payment_confirmed_at);
+
+                        html += '<li class="payment-summary-item">';
+
+                        // Título do contrato baseado no status
+                        if (grupoStatus === 'pendente') {
+                            html += '<h3>Pagamento Pendente (' + grupo.length + ' diária' + (grupo.length > 1 ? 's' : '') + ')</h3>';
+                        } else if (grupoStatus === 'confirmado' && !todasAssinadas) {
+                            html += '<h3>Contrato Não Assinado (' + grupo.length + ' diária' + (grupo.length > 1 ? 's' : '') + ')</h3>';
+                        } else if (grupoStatus === 'confirmado' && todasAssinadas) {
+                            html += '<h3>Contrato Assinado (' + grupo.length + ' diária' + (grupo.length > 1 ? 's' : '') + ')</h3>';
+                        } else if (grupoStatus === 'cancelado') {
+                            html += '<h3>Reserva Cancelada (' + grupo.length + ' diária' + (grupo.length > 1 ? 's' : '') + ')</h3>';
+                        } else {
+                            html += '<h3>Contrato (' + grupo.length + ' diária' + (grupo.length > 1 ? 's' : '') + ')</h3>';
+                        }
+
+                        if (grupoTotal > 0) {
+                            html += '<p><strong>Valor Total:</strong> R$ ' + grupoTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + '</p>';
+                        }
+                        html += '<p><strong>Quantidade:</strong> ' + grupo.length + ' reserva' + (grupo.length > 1 ? 's' : '') + '</p>';
+
+                        // Adicionar detalhes das reservas do grupo
+                        grupo.forEach(function(reserva) {
+                            html += '<div style="margin: 5px 0; padding: 8px; background-color: #f8f9fa; border-radius: 4px; border-left: 3px solid #007bff;">';
+                            html += '<p><strong>Reserva para:</strong> ' + reserva.data_formatada + '</p>';
+                            html += '<p><strong>Status:</strong> ' + reserva.status_formatado + '</p>';
+                            if(reserva.payment_confirmed_at) {
+                                html += '<p><strong>Data de Confirmação:</strong> ' + new Date(reserva.payment_confirmed_at).toLocaleString('pt-BR') + '</p>';
+                            }
+                            html += '<p><strong>Valor:</strong> ' + reserva.valor_formatado + '</p>';
+                            if(reserva.observacoes) {
+                                html += '<p><strong>Observações:</strong> ' + escapeHtml(reserva.observacoes) + '</p>';
+                            }
+                            html += '</div>';
+                        });
+
+                        html += '<div class="button-container" style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px;">';
+
+                        // Botões diferentes com base no status do grupo
+                        if (grupoStatus === 'pendente') {
+                            html += '<button class="btn btn-success btn-lg pagamento-unico-btn" style="color: white; flex: 1; min-width: 150px;" data-reservas-ids=\'' + JSON.stringify(grupo.map(r => r.id)) + '\' data-reservas-datas=\'' + JSON.stringify(grupo.map(r => r.data_formatada)) + '\' data-valor-total="' + grupoTotal + '">' + (grupo.length > 1 ? 'Pagar Todas (' + grupo.length + ')' : 'Realizar Pagamento') + '</button>';
+                        } else if (grupoStatus === 'confirmado' && !todasAssinadas) {
+                            if (todasComPagamento) {
+                                html += '<button class="btn btn-primary btn-lg emitir-todos-recibos-btn" style="color: white; flex: 1; min-width: 150px;" data-reservas-ids=\'' + JSON.stringify(grupo.map(r => r.id)) + '\' data-reservas-datas=\'' + JSON.stringify(grupo.map(r => r.data_formatada)) + '\' data-reservas-valores=\'' + JSON.stringify(grupo.map(r => r.valor_formatado)) + '\'>' + (grupo.length > 1 ? 'Emitir Recibo(s)' : 'Emitir Recibo') + '</button>';
+                            }
+                            html += '<button class="btn btn-info btn-lg assinar-todos-btn" style="color: white; flex: 1; min-width: 150px;" data-reservas-ids=\'' + JSON.stringify(grupo.map(r => r.id)) + '\' data-reservas-datas=\'' + JSON.stringify(grupo.map(r => r.data_formatada)) + '\'>' + (grupo.length > 1 ? 'Assinar Contrato' : 'Assinar Contrato') + '</button>';
+                        } else if (grupoStatus === 'confirmado' && todasAssinadas) {
+                            html += '<button class="btn btn-primary btn-lg emitir-todos-recibos-btn" style="color: white; flex: 1; min-width: 150px;" data-reservas-ids=\'' + JSON.stringify(grupo.map(r => r.id)) + '\' data-reservas-datas=\'' + JSON.stringify(grupo.map(r => r.data_formatada)) + '\' data-reservas-valores=\'' + JSON.stringify(grupo.map(r => r.valor_formatado)) + '\'>' + (grupo.length > 1 ? 'Emitir Recibo(s)' : 'Emitir Recibo') + '</button>';
+                            html += '<button class="btn btn-warning btn-lg ver-contrato-todos-btn" style="color: white; flex: 1; min-width: 150px;" data-reservas-ids=\'' + JSON.stringify(grupo.map(r => r.id)) + '\'>' + (grupo.length > 1 ? 'Ver Contrato' : 'Ver Contrato') + '</button>';
+                        }
+
+                        // Botão de exclusão para pendentes e canceladas
+                        if (grupoStatus === 'pendente' || grupoStatus === 'cancelado') {
+                            html += '<button class="btn btn-danger btn-lg excluir-todas-btn" style="color: white; flex: 1; min-width: 150px;" data-reservas-ids=\'' + JSON.stringify(grupo.map(r => r.id)) + '\' data-reservas-datas=\'' + JSON.stringify(grupo.map(r => r.data_formatada)) + '\'>' + (grupo.length > 1 ? 'Excluir Reservas' : 'Excluir Reserva') + '</button>';
+                        }
+
+                        html += '</div>';
+                        html += '</li>';
+                        html += '<li class="divider"><hr></li>';
                     }
-                    html += '<p><strong>Valor:</strong> ' + reserva.valor_formatado + '</p>';
-                    if(reserva.observacoes) {
-                        html += '<p><strong>Observações:</strong> ' + escapeHtml(reserva.observacoes) + '</p>';
-                    }
-
-                    html += '<div class="button-container" style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px;">';
-
-                    // Botão de pagamento individual (apenas para reservas pendentes)
-                    if(reserva.status === 'pendente') {
-                        html += '<button class="btn btn-success btn-lg realizar-pagamento-btn" style="color: white; flex: 1; min-width: 150px;" data-reserva-id="' + reserva.id + '" data-reserva-data="' + reserva.data_formatada + '" data-reserva-valor="' + reserva.valor_formatado + '">Realizar Pagamento</button>';
-                    }
-
-                    // Botão de emissão de recibo individual (para reservas confirmadas com pagamento)
-                    if(reserva.status === 'confirmado' && reserva.payment_confirmed_at) {
-                        html += '<button class="btn btn-primary btn-lg emitir-recibo-btn" style="color: white; flex: 1; min-width: 150px;" data-reserva-id="' + reserva.id + '">Emitir Recibo</button>';
-                    }
-
-                    // Botão de assinatura individual (para reservas confirmadas não assinadas)
-                    if(reserva.status === 'confirmado' && !reserva.contrato_assinado) {
-                        html += '<button class="btn btn-info btn-lg assinar-contrato-btn" style="color: white; flex: 1; min-width: 150px;" data-reserva-id="' + reserva.id + '">Assinar Contrato</button>';
-                    }
-
-                    // Botão para ver contratos assinados (para reservas confirmadas com contrato assinado)
-                    // Este botão aparecerá ao lado do botão "Emitir Recibo" quando o contrato estiver assinado
-                    if(reserva.status === 'confirmado' && reserva.contrato_assinado) {
-                        html += '<button class="btn btn-info btn-lg ver-contrato-btn" style="color: white; flex: 1; min-width: 150px;" data-reserva-id="' + reserva.id + '">Ver Contrato Assinado</button>';
-                    }
-
-                    // Botão de exclusão (para reservas pendentes ou canceladas)
-                    if(reserva.status === 'pendente' || reserva.status === 'cancelado') {
-                        html += '<button class="btn btn-danger btn-lg excluir-reserva-btn" style="color: white; flex: 1; min-width: 150px;" data-reserva-id="' + reserva.id + '" data-reserva-data="' + reserva.data_formatada + '">Excluir Reserva</button>';
-                    }
-
-                    html += '</div>';
-                    html += '</li>';
                 });
 
 
@@ -1173,9 +1072,76 @@ $(document).on('click', '.excluir-reserva-btn', function() {
     }
 });
 
+// Adicionar manipulador para o botão "Excluir Todas as Reservas do Grupo"
+$(document).on('click', '.excluir-todas-btn', function() {
+    const reservasIds = $(this).data('reservas-ids');
+    const reservasDatas = $(this).data('reservas-datas');
+
+    if (reservasIds && reservasIds.length > 0) {
+        // Criar mensagem de confirmação com as datas
+        const datasStr = reservasDatas.join(', ');
+        const confirmMsg = `Tem certeza que deseja excluir ${reservasIds.length} reserva${reservasIds.length > 1 ? 's' : ''} para os dias ${datasStr}? Esta ação não poderá ser desfeita.`;
+
+        if (confirm(confirmMsg)) {
+            // Excluir cada reserva individualmente
+            let exclusoesSucesso = 0;
+            let exclusoesTotal = reservasIds.length;
+
+            // Processar exclusões sequencialmente
+            function excluirProxima(index) {
+                if (index >= reservasIds.length) {
+                    // Todas as exclusões foram processadas
+                    let mensagemFinal = `Exclusão concluída: ${exclusoesSucesso} de ${exclusoesTotal} reserva${exclusoesTotal > 1 ? 's' : ''} excluída${exclusoesTotal > 1 ? 's' : ''} com sucesso.`;
+
+                    if (exclusoesSucesso < exclusoesTotal) {
+                        mensagemFinal += ` ${exclusoesTotal - exclusoesSucesso} reserva${exclusoesTotal - exclusoesSucesso > 1 ? 's' : ''} não puderam ser excluídas.`;
+                    }
+
+                    Swal.fire({
+                        title: exclusoesSucesso > 0 ? 'Sucesso!' : 'Atenção!',
+                        text: mensagemFinal,
+                        icon: exclusoesSucesso > 0 ? 'success' : 'warning',
+                        confirmButtonText: 'OK'
+                    });
+
+                    // Recarregar as reservas para atualizar a lista
+                    loadUserReservations();
+                    return;
+                }
+
+                const reservaId = reservasIds[index];
+                $.ajax({
+                    url: '../php/delete_reservation.php',
+                    type: 'POST',
+                    data: {
+                        reserva_id: reservaId
+                    },
+                    dataType: 'json',
+                    success: function(response) {
+                        if (response.success) {
+                            exclusoesSucesso++;
+                        } else {
+                            console.error('Erro ao excluir reserva ' + reservaId + ':', response.message);
+                        }
+                    },
+                    error: function() {
+                        console.error('Erro de comunicação ao excluir reserva ' + reservaId);
+                    },
+                    complete: function() {
+                        excluirProxima(index + 1);
+                    }
+                });
+            }
+
+            excluirProxima(0);
+        }
+    }
+});
+
 // Adicionar manipulador para o botão "Assinar Contrato Individual"
 $(document).on('click', '.assinar-contrato-btn', function() {
     const reservaId = $(this).data('reserva-id');
+    const reservasIds = $(this).data('reservas-ids');
 
     if (reservaId) {
         // Confirmar com o usuário antes de prosseguir
@@ -1188,8 +1154,14 @@ $(document).on('click', '.assinar-contrato-btn', function() {
             cancelButtonText: 'Cancelar'
         }).then((result) => {
             if (result.isConfirmed) {
-                // Redirecionar para a página de contrato com o ID da reserva específica
-                window.open('contrato.php?reserva_id=' + encodeURIComponent(reservaId), '_blank');
+                // Se houver múltiplas reservas para o mesmo pagamento, passar todas elas
+                if (reservasIds && reservasIds.length > 0) {
+                    // Redirecionar para a página de contrato com múltiplos IDs de reserva
+                    window.open('contrato.php?reservas_ids=' + encodeURIComponent(JSON.stringify(reservasIds)), '_blank');
+                } else {
+                    // Redirecionar para a página de contrato com o ID da reserva específica
+                    window.open('contrato.php?reserva_id=' + encodeURIComponent(reservaId), '_blank');
+                }
             }
         });
     }
@@ -1301,10 +1273,17 @@ $(document).on('click', '.emitir-todos-recibos-btn', function() {
 // Adicionar manipulador para o botão "Ver Contrato Assinado"
 $(document).on('click', '.ver-contrato-btn', function() {
     const reservaId = $(this).data('reserva-id');
+    const reservasIds = $(this).data('reservas-ids');
 
-    if (reservaId) {
-        // Redirecionar para a página de contrato com o ID da reserva específica
-        window.open('contrato.php?reserva_id=' + encodeURIComponent(reservaId), '_blank');
+    if (reservaId || (reservasIds && reservasIds.length > 0)) {
+        // Se houver múltiplas reservas para o mesmo pagamento, passar todas elas
+        if (reservasIds && reservasIds.length > 0) {
+            // Redirecionar para a página de contrato com múltiplos IDs de reserva
+            window.open('contrato.php?reservas_ids=' + encodeURIComponent(JSON.stringify(reservasIds)), '_blank');
+        } else {
+            // Redirecionar para a página de contrato com o ID da reserva específica
+            window.open('contrato.php?reserva_id=' + encodeURIComponent(reservaId), '_blank');
+        }
     }
 });
 

@@ -14,8 +14,43 @@ if (!isset($_SESSION['user_id'])) {
 
 $user_id = $_SESSION['user_id'];
 
-// Consultar reservas do usuário
-$stmt = $conn->prepare("SELECT id, data, valor, status, observacoes, created_at, payment_confirmed_at, payment_percentage, tipo_porcentagem FROM reservas WHERE user_id = ? ORDER BY data DESC");
+// Primeiro, obter todos os vínculos de pagamento para o usuário específico
+$payment_links_stmt = $conn->prepare("
+    SELECT mpl.mp_payment_id, mpl.reservation_ids
+    FROM mp_payment_links mpl
+    JOIN reservas r ON FIND_IN_SET(r.id, mpl.reservation_ids) > 0
+    WHERE r.user_id = ?
+");
+$payment_links_stmt->bind_param("i", $user_id);
+$payment_links_stmt->execute();
+$payment_links_result = $payment_links_stmt->get_result();
+
+$payment_groups = [];
+while ($row = $payment_links_result->fetch_assoc()) {
+    $reservation_ids = explode(',', $row['reservation_ids']);
+    $reservation_ids = array_map('trim', $reservation_ids); // Remover espaços em branco
+
+    // Filtrar apenas as reservas que pertencem ao usuário atual
+    $user_reservation_ids = [];
+    foreach ($reservation_ids as $res_id) {
+        $check_user_stmt = $conn->prepare("SELECT id FROM reservas WHERE id = ? AND user_id = ?");
+        $check_user_stmt->bind_param("si", $res_id, $user_id);
+        $check_user_stmt->execute();
+        $check_result = $check_user_stmt->get_result();
+
+        if ($check_result->num_rows > 0) {
+            $user_reservation_ids[] = $res_id;
+        }
+        $check_user_stmt->close();
+    }
+
+    if (!empty($user_reservation_ids)) {
+        $payment_groups[$row['mp_payment_id']] = $user_reservation_ids;
+    }
+}
+
+// Agora obter todas as reservas do usuário
+$stmt = $conn->prepare("SELECT id, data, valor, status, observacoes, created_at, payment_confirmed_at, payment_percentage, tipo_porcentagem, reserva_grupo FROM reservas WHERE user_id = ? ORDER BY data DESC");
 $stmt->bind_param("i", $user_id);
 $stmt->execute();
 $result = $stmt->get_result();
@@ -23,14 +58,15 @@ $result = $stmt->get_result();
 $reservas = [];
 $recent_status_change = false; // Flag para verificar se houve mudança de status recente
 
+// Processar cada reserva e determinar a qual grupo de pagamento ela pertence
 while ($row = $result->fetch_assoc()) {
     // Formatar data
     $date = new DateTime($row['data']);
     $formatted_date = $date->format('d/m/Y');
-    
+
     // Formatar valor
     $formatted_valor = 'R$ ' . number_format($row['valor'], 2, ',', '.');
-    
+
     // Formatar status
     $status_formatado = '';
     switch($row['status']) {
@@ -46,20 +82,19 @@ while ($row = $result->fetch_assoc()) {
         default:
             $status_formatado = ucfirst($row['status']);
     }
-    
+
     // Verificar se houve mudança de status recente (nos últimos 5 minutos, por exemplo)
-    // Vamos verificar se o campo payment_confirmed_at foi preenchido recentemente
     if ($row['status'] === 'confirmado' && !empty($row['payment_confirmed_at'])) {
         $payment_confirmed_at = new DateTime($row['payment_confirmed_at']);
         $now = new DateTime();
         $interval = $now->diff($payment_confirmed_at);
-        
+
         // Considerar mudança recente se payment_confirmed_at for nos últimos 5 minutos
         if ($interval->i < 5 && $interval->h === 0 && $interval->d === 0) {
             $recent_status_change = true;
         }
     }
-    
+
     // Verificar se o contrato para esta reserva já foi assinado e obter a data de assinatura
     $contrato_stmt = $conn->prepare("SELECT data_assinatura FROM contratos_assinados WHERE user_id = ? AND reserva_id = ?");
     $contrato_stmt->bind_param("is", $user_id, $row['id']);
@@ -68,10 +103,20 @@ while ($row = $result->fetch_assoc()) {
     $contrato_row = $contrato_result->fetch_assoc();
     $contrato_assinado = $contrato_result->num_rows > 0;
     $data_assinatura = $contrato_assinado ? $contrato_row['data_assinatura'] : null;
-    
+
+    // Encontrar a qual pagamento esta reserva pertence
+    $mp_payment_id = null;
+    foreach ($payment_groups as $payment_id => $res_ids) {
+        if (in_array($row['id'], $res_ids)) {
+            $mp_payment_id = $payment_id;
+            break;
+        }
+    }
+
     $reservas[] = [
         'id' => $row['id'],
         'data' => $row['data'],
+        'data_reserva' => $row['data'], // Also provide data_reserva for compatibility with JavaScript sorting
         'data_formatada' => $formatted_date,
         'valor' => $row['valor'],
         'valor_formatado' => $formatted_valor,
@@ -82,8 +127,10 @@ while ($row = $result->fetch_assoc()) {
         'payment_confirmed_at' => $row['payment_confirmed_at'] ? (new DateTime($row['payment_confirmed_at']))->format('Y-m-d H:i:s') : null, // Formatando a data de confirmação
         'payment_percentage' => $row['payment_percentage'] ?? 50, // Padrão 50% se não definido
         'tipo_porcentagem' => $row['tipo_porcentagem'] ?? '50', // Padrão '50' se não definido
+        'reserva_grupo' => $row['reserva_grupo'], // Grupo de reserva para agrupar diárias
         'contrato_assinado' => $contrato_assinado,
-        'data_assinatura' => $data_assinatura ? (new DateTime($data_assinatura))->format('d/m/Y H:i:s') : null
+        'data_assinatura' => $data_assinatura ? (new DateTime($data_assinatura))->format('d/m/Y H:i:s') : null,
+        'mp_payment_id' => $mp_payment_id // ID do pagamento do Mercado Pago associado a esta reserva
     ];
 }
 
@@ -113,5 +160,6 @@ echo json_encode([
 ]);
 
 $stmt->close();
+$payment_links_stmt->close();
 $conn->close();
 ?>

@@ -56,11 +56,14 @@ try {
     
     // Gerar um ID de reserva único
     $reservation_id = uniqid('res_' . date('YmdHis'));
-    
+
+    // Generate a random group identifier
+    $reserva_grupo = bin2hex(random_bytes(8));
+
     // Inserir reserva pendente no banco
-    $insertStmt = $conn->prepare("INSERT INTO reservas (id, user_id, data, valor, status, observacoes, created_at) VALUES (?, ?, ?, ?, 'pendente', ?, NOW())");
+    $insertStmt = $conn->prepare("INSERT INTO reservas (id, user_id, data, valor, status, observacoes, created_at, reserva_grupo) VALUES (?, ?, ?, ?, 'pendente', ?, NOW(), ?)");
     $status = 'pendente';
-    $insertStmt->bind_param("sssss", $reservation_id, $user_id, $date, $valor, $observacoes);
+    $insertStmt->bind_param("ssssss", $reservation_id, $user_id, $date, $valor, $observacoes, $reserva_grupo);
     
     if (!$insertStmt->execute()) {
         throw new Exception('Erro ao criar reserva');

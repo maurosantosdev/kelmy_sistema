@@ -122,21 +122,25 @@ while ($reserva = $reservas_result->fetch_assoc()) {
 }
 
 
-// Verificar se o contrato já foi assinado para todas as reservas
+// Verificar se o contrato já foi assinado para cada reserva individualmente
 $contrato_assinado = false;
+$reservas_com_contrato_assinado = [];
+
 if (!empty($reservas)) {
-    $placeholders = str_repeat('?,', count($reservas) - 1) . '?';
-    $ids = array_column($reservas, 'id');
+    foreach ($reservas as $reserva) {
+        $assinatura_query = $conn->prepare("SELECT COUNT(*) as total FROM contratos_assinados WHERE user_id = ? AND reserva_id = ?");
+        $assinatura_query->bind_param("is", $user_id, $reserva['id']);
+        $assinatura_query->execute();
+        $assinatura_result = $assinatura_query->get_result();
+        $assinatura = $assinatura_result->fetch_assoc();
 
-    $assinatura_query = $conn->prepare("SELECT COUNT(*) as total FROM contratos_assinados WHERE user_id = ? AND reserva_id IN ($placeholders)");
-    $types = 'i' . str_repeat('s', count($ids));
-    $assinatura_query->bind_param($types, $user_id, ...$ids);
-    $assinatura_query->execute();
-    $assinatura_result = $assinatura_query->get_result();
-    $assinatura = $assinatura_result->fetch_assoc();
+        if ($assinatura['total'] > 0) {
+            $reservas_com_contrato_assinado[] = $reserva['id'];
+        }
+    }
 
-    // O contrato está assinado se já tiver sido assinado para todas as reservas ativas
-    $contrato_assinado = $assinatura['total'] == count($reservas);
+    // O contrato está considerado assinado se todas as reservas atuais já foram assinadas
+    $contrato_assinado = count($reservas_com_contrato_assinado) == count($reservas);
 
     // Calcular o número real de diárias considerando apenas as datas sendo assinadas agora
     if (count($reservas) > 0) {
@@ -144,6 +148,7 @@ if (!empty($reservas)) {
         $num_diarias_to_display = count($reservas);
         // Debug: Remover depois de testar
         error_log("DEBUG contrato.php - Número de reservas: " . count($reservas) . " - IDs: " . json_encode(array_column($reservas, 'id')));
+        error_log("DEBUG contrato.php - Reservas com contrato assinado: " . json_encode($reservas_com_contrato_assinado));
     } else {
         $num_diarias_to_display = 0;
     }
@@ -555,21 +560,24 @@ if (isset($num_diarias_to_display)) {
                 
                 <?php if(count($reservas) > 0): ?>
                 <?php
-                // Calcular horas totais com base na duração das reservas atuais
+                // Calcular horas totais com base nas reservas atuais, sem considerar antigas
                 $total_horas = 0;
                 $data_inicio = null;
                 $data_fim = null;
 
-                if ($num_diarias_to_display == 1) {
+                // Separar apenas as reservas atuais (não as antigas que já foram)
+                $reservas_atuais = $reservas;  // Neste contexto, $reservas contém apenas as selecionadas para assinatura
+
+                if (count($reservas_atuais) == 1) {
                     // Para uma única reserva, calcular duração individual
-                    $data_inicio = $reservas[0]['data'];
+                    $data_inicio = $reservas_atuais[0]['data'];
                     $data_fim = date('Y-m-d', strtotime($data_inicio . ' +1 day'));
                     $total_horas = 23; // Uma diária = 23 horas (09:00 do dia até 08:00 do dia seguinte)
                 } else {
-                    // Para múltiplas reservas, calcular duração total apenas das atuais
+                    // Para múltiplas reservas, calcular duração total apenas das atuais selecionadas
                     $current_reservation_dates = array_map(function($reserva) {
                         return new DateTime($reserva['data']);
-                    }, $reservas);
+                    }, $reservas_atuais);
 
                     // Apenas datas atuais, ordenar e usar
                     usort($current_reservation_dates, function($a, $b) {
@@ -582,18 +590,18 @@ if (isset($num_diarias_to_display)) {
                     $data_fim = date('Y-m-d', strtotime($last_date->format('Y-m-d') . ' +1 day'));
 
                     // Calcular horas totais: (24 horas * número total de diárias) - 1
-                    $total_horas = (24 * $num_diarias_to_display) - 1;
+                    $total_horas = (24 * count($reservas_atuais)) - 1;
                 }
                 ?>
                                 <div class="contract-clause">
                     <strong>CLÁUSULA PRIMEIRA:</strong><br>
                     <?php
-                    // Calcular as horas com base no número total de diárias (considerando datas já assinadas)
-                    if ($num_diarias_to_display > 1) {
-                        $horas_calculadas = (24 * $num_diarias_to_display) - 1;
+                    // Calcular as horas com base no número total de diárias atuais
+                    if (count($reservas_atuais) > 1) {
+                        $horas_calculadas = (24 * count($reservas_atuais)) - 1;
                         echo "O prazo de locação de temporada será de $horas_calculadas (".numero_extenso($horas_calculadas).") horas a partir das 09:00 horas do dia ".date('d/m/Y', strtotime($data_inicio)).", terminando às 08:00 horas do dia ".date('d/m/Y', strtotime($data_fim)).", data em que locatário se obriga a restituir a chácara locada, completamente desocupado e nas condições de entrada;";
                     } else {
-                        $reserva = $reservas[0]; // Usar a primeira reserva para mostrar informação individual
+                        $reserva = $reservas_atuais[0]; // Usar a reserva atual para mostrar informação individual
                         echo "O prazo de locação de temporada será de 23 (vinte e três) horas a partir das 09:00 horas do dia ".date('d/m/Y', strtotime($reserva['data'])).", terminando às 08:00 horas do dia ".date('d/m/Y', strtotime($reserva['data'] . ' +1 day')).", data em que locatário se obriga a restituir a chácara locada, completamente desocupado e nas condições de entrada;";
                     }
                     ?>
@@ -602,12 +610,12 @@ if (isset($num_diarias_to_display)) {
                 <div class="contract-clause">
                     <strong>CLÁUSULA SEGUNDA:</strong><br>
                     <?php
-                    // Informações de pagamento e valor total
-                    $total_valor = array_sum(array_column($reservas, 'valor'));
+                    // Informações de pagamento e valor total para as reservas atuais
+                    $total_valor = array_sum(array_column($reservas_atuais, 'valor'));
 
                     // Determinar o texto baseado no tipo_porcentagem
                     // Verificar se todas as reservas têm o mesmo tipo_porcentagem
-                    $tipo_porcentagens = array_unique(array_column($reservas, 'tipo_porcentagem'));
+                    $tipo_porcentagens = array_unique(array_column($reservas_atuais, 'tipo_porcentagem'));
 
                     // Assuming all reservations in the contract have the same tipo_porcentagem
                     $tipo_porcentagem_atual = !empty($tipo_porcentagens) ? $tipo_porcentagens[0] : '50';
@@ -615,22 +623,22 @@ if (isset($num_diarias_to_display)) {
                     if ($tipo_porcentagem_atual == '100') {
                         // 100% payment: texto mais curto e direto
                         $valor_extenso = numero_extenso(intval($total_valor));
-                        echo "O aluguel da temporada corresponde a ".$num_diarias_to_display." diária".($num_diarias_to_display > 1 ? 's' : '')." totalizando R$".number_format($total_valor, 2, ',', '.')." (".$valor_extenso." reais), totalizando assim a reserva efetivada.";
+                        echo "O aluguel da temporada corresponde a ".count($reservas_atuais)." diária".(count($reservas_atuais) > 1 ? 's' : '')." totalizando R$".number_format($total_valor, 2, ',', '.')." (".$valor_extenso." reais), totalizando assim a reserva efetivada com os dias selecionados.";
                     } else {
                         // 50% payment or other: texto padrão com detalhes de pagamento
                         $valor_extenso = numero_extenso(intval($total_valor));
-                        echo "O aluguel da temporada corresponde a ".$num_diarias_to_display." diária".($num_diarias_to_display > 1 ? 's' : '')." totalizando R$".number_format($total_valor, 2, ',', '.')." (".$valor_extenso." reais). E será pago 50% do valor de sinal para contratação da data estipulada na assinatura do contrato e os outros 50% 1 (um) dia antes da data de entrada, totalizando assim a reserva efetivada;";
-                        if(count($reservas) > 1):
-                        echo " Caso o cliente selecione mais de um dia também especifique aqui.";
+                        echo "O aluguel da temporada corresponde a ".count($reservas_atuais)." diária".(count($reservas_atuais) > 1 ? 's' : '')." totalizando R$".number_format($total_valor, 2, ',', '.')." (".$valor_extenso." reais). E será pago 50% do valor de sinal para contratação da data estipulada na assinatura do contrato e os outros 50% 1 (um) dia antes da data de entrada, totalizando assim a reserva efetivada;";
+                        if(count($reservas_atuais) > 1):
+                        echo " Caso o cliente selecione mais de um dia, estes serão especificados como dias únicos ou consecutivos de acordo com a escolha do cliente.";
                         endif;
-                        echo " Caso o cliente escolha o pagamento ser 100% do valor só mude a porcentagem adicionando as diárias.";
+                        echo " Caso o cliente escolha o pagamento ser 100% do valor, a porcentagem será alterada para refletir o pagamento total das diárias selecionadas.";
                     }
                     ?>
                 </div>
-                
-                <!-- Valor total das reservas após a segunda cláusula -->
+
+                <!-- Valor total das reservas atuais após a segunda cláusula -->
                 <div class="contract-section" style="font-weight: bold; text-align: center; margin: 15px 0; padding: 10px; background-color: #f0f0f0; border: 1px solid #ccc;">
-                    <p>Valor Total das Reservas: R$<?php echo number_format(array_sum(array_column($reservas, 'valor')), 2, ',', '.'); ?> (<?php echo numero_extenso(intval(array_sum(array_column($reservas, 'valor')))); ?> reais)</p>
+                    <p>Valor Total das Reservas Atuais: R$<?php echo number_format(array_sum(array_column($reservas_atuais, 'valor')), 2, ',', '.'); ?> (<?php echo numero_extenso(intval(array_sum(array_column($reservas_atuais, 'valor')))); ?> reais)</p>
                 </div>
 
                 <?php else: ?>
@@ -963,9 +971,9 @@ $(document).on('pageinit', '#contratoPageCliente', function() {
                         $('#aceiteContrato').parent().hide();
                         $('#btnAssinarContrato').hide();
                         
-                        // Redirecionar após um breve delay
+                        // Redirecionar para a página de reservas após um breve delay
                         setTimeout(function() {
-                            window.location.href = 'perfil.php';
+                            window.location.href = 'suas_reservas.php';
                         }, 2000);
                     } else {
                         Swal.fire({

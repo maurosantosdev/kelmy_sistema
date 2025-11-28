@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Teste de Agrupamento</title>
+</head>
+<body>
+    <h1>Teste de Agrupamento de Reservas</h1>
+    <div id="result"></div>
+
+    <script>
+        // Simular os dados que seriam recebidos do backend
+        const response = {
+            reservations: [
+                {id: "res_69284fde119f70.97323305", data_formatada: "08/11/2025", status: "confirmado", mp_payment_id: "134827532833", valor_formatado: "R$ 1.200,00"},
+                {id: "res_69284fde119e66.56093241", data_formatada: "07/11/2025", status: "confirmado", mp_payment_id: "134827532833", valor_formatado: "R$ 1.200,00"},
+                {id: "res_69284e74101353.09312711", data_formatada: "05/11/2025", status: "confirmado", mp_payment_id: "135440582036", valor_formatado: "R$ 1.200,00"}
+            ]
+        };
+
+        console.log("Dados recebidos:", response.reservations);
+
+        // Aplicar a lógica de agrupamento exatamente como está no frontend
+        let todasReservas = response.reservations;
+        
+        // Ordenar todas as reservas por data
+        try {
+            todasReservas.sort((a, b) => {
+                if (a.data_reserva && b.data_reserva) {
+                    const [dayA, monthA, yearA] = a.data_reserva.split('/');
+                    const [dayB, monthB, yearB] = b.data_reserva.split('/');
+                    const dateA = new Date(`${yearA}-${monthA}-${dayA}`);
+                    const dateB = new Date(`${yearB}-${monthB}-${dayB}`);
+                    return dateA - dateB;
+                } else {
+                    // Para ordenar por data_formatada (dd/mm/yyyy)
+                    const [dayA, monthA, yearA] = a.data_formatada.split('/');
+                    const [dayB, monthB, yearB] = b.data_formatada.split('/');
+                    const dateA = new Date(`${yearA}-${monthA}-${dayA}`);
+                    const dateB = new Date(`${yearB}-${monthB}-${dayB}`);
+                    return dateA - dateB;
+                }
+            });
+        } catch (e) {
+            console.error('Erro ao ordenar todas as reservas:', e);
+        }
+
+        // Agrupar todas as reservas por ID de pagamento (mp_payment_id) do Mercado Pago
+        let gruposPorPagamento = [];
+        let gruposProcessados = new Set();
+
+        // Primeiro, agrupar as reservas que têm o mesmo mp_payment_id
+        for (let i = 0; i < todasReservas.length; i++) {
+            const reserva = todasReservas[i];
+
+            // Se a reserva tem um pagamento associado e ainda não foi processada
+            if (reserva.mp_payment_id && !gruposProcessados.has(reserva.mp_payment_id)) {
+                // Encontrar todas as reservas com o mesmo ID de pagamento
+                const reservasMesmoPagamento = todasReservas.filter(r => r.mp_payment_id === reserva.mp_payment_id);
+
+                if (reservasMesmoPagamento.length > 0) {
+                    gruposPorPagamento.push(reservasMesmoPagamento);
+                    gruposProcessados.add(reserva.mp_payment_id);
+                    console.log(`Agrupando pagamento ${reserva.mp_payment_id}:`, reservasMesmoPagamento.map(r => r.id));
+                }
+            }
+        }
+
+        // Depois, adicionar reservas que não têm pagamento associado como grupos individuais
+        todasReservas.forEach(reserva => {
+            if (!reserva.mp_payment_id) {
+                gruposPorPagamento.push([reserva]);
+                console.log(`Adicionando reserva individual:`, reserva.id);
+            }
+        });
+
+        console.log("Agrupamento final:", gruposPorPagamento);
+
+        // Exibir cada grupo como um pagamento/contrato diferente
+        let grupoCount = 0;
+        gruposPorPagamento.forEach(function(grupo) {
+            grupoCount++;
+            console.log(`Grupo ${grupoCount}:`);
+            grupo.forEach(function(reserva) {
+                console.log(`  - ${reserva.id}, Data: ${reserva.data_formatada}, Payment ID: ${reserva.mp_payment_id}`);
+            });
+        });
+
+        // Mostrar resultados na página
+        const resultDiv = document.getElementById('result');
+        resultDiv.innerHTML = '<h2>Resultado do Agrupamento:</h2>';
+        gruposPorPagamento.forEach((grupo, idx) => {
+            resultDiv.innerHTML += `<h3>Grupo ${idx + 1}:</h3>`;
+            grupo.forEach(reserva => {
+                resultDiv.innerHTML += `<p>- ID: ${reserva.id}, Data: ${reserva.data_formatada}, Payment ID: ${reserva.mp_payment_id}</p>`;
+            });
+            resultDiv.innerHTML += `<p>Quantidade no grupo: ${grupo.length}</p><hr>`;
+        });
+    </script>
+</body>
+</html>
