@@ -20,6 +20,7 @@ if (!isset($_SESSION['user_id'])) {
     <link rel="stylesheet" href="../assets/css/jquery.mobile-1.4.5.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="profile-styles.css">
 </head>
 <body>
 
@@ -30,24 +31,98 @@ if (!isset($_SESSION['user_id'])) {
         <a href="#" id="logout-link" class="ui-btn-right ui-btn ui-corner-all">Sair</a>
     </div>
 
-    <div role="main" class="ui-content">
-        <div class="card">
-            <h2>Informações do Perfil</h2>
-            <p><strong>Nome:</strong> <span id="user-name"><?php echo htmlspecialchars($_SESSION['user_name'] ?? 'Carregando...'); ?></span></p>
-            <p><strong>E-mail:</strong> <span id="user-email"><?php echo htmlspecialchars($_SESSION['user_email'] ?? 'Carregando...'); ?></span></p>
-            <p><strong>Telefone:</strong> <span id="user-phone">Carregando...</span></p>
-            <p><strong>CPF:</strong> <span id="user-cpf">Carregando...</span></p>
-            <p><strong>RG:</strong> <span id="user-rg">Carregando...</span></p>
-            <p><strong>Data de Nascimento:</strong> <span id="user-data-nascimento">Carregando...</span></p>
-            <p><strong>Estado Civil:</strong> <span id="user-estado-civil">Carregando...</span></p>
-            <p><strong>Endereço:</strong> <span id="user-endereco">Carregando...</span></p>
-            <p><strong>CEP:</strong> <span id="user-cep">Carregando...</span></p>
-            <p><strong>Cidade:</strong> <span id="user-cidade">Carregando...</span></p>
-            <p><strong>Data de Cadastro:</strong> <span id="user-created-at">Carregando...</span></p>
+    <div role="main" class="ui-content" style="padding: 0;">
+        <div class="profile-container">
+            <div class="profile-header">
+                <div class="profile-avatar"><?php echo strtoupper(substr(htmlspecialchars($_SESSION['user_name'] ?? 'C'), 0, 1)); ?></div>
+                <div class="profile-info">
+                    <h1 class="profile-name" id="user-name"><?php echo htmlspecialchars($_SESSION['user_name'] ?? 'Carregando...'); ?></h1>
+                    <p class="profile-email" id="user-email"><?php echo htmlspecialchars($_SESSION['user_email'] ?? 'Carregando...'); ?></p>
+                </div>
+            </div>
+
+            <div class="profile-stats">
+                <div class="stat-card">
+                    <h3 class="stat-value" id="user-phone">Carregando...</h3>
+                    <p class="stat-label">Telefone</p>
+                </div>
+                <div class="stat-card">
+                    <h3 class="stat-value" id="user-cpf">Carregando...</h3>
+                    <p class="stat-label">CPF</p>
+                </div>
+                <div class="stat-card">
+                    <h3 class="stat-value" id="user-rg">Carregando...</h3>
+                    <p class="stat-label">RG</p>
+                </div>
+                <div class="stat-card">
+                    <h3 class="stat-value" id="user-data-nascimento">Carregando...</h3>
+                    <p class="stat-label">Nascimento</p>
+                </div>
+            </div>
+
+            <div class="profile-content">
+                <div class="profile-section">
+                    <h3>Dados Pessoais</h3>
+                    <div class="profile-details">
+                        <div class="profile-detail">
+                            <p class="profile-detail-label">Nome</p>
+                            <p class="profile-detail-value" id="detail-user-name"><?php echo htmlspecialchars($_SESSION['user_name'] ?? 'Carregando...'); ?></p>
+                        </div>
+                        <div class="profile-detail">
+                            <p class="profile-detail-label">E-mail</p>
+                            <p class="profile-detail-value" id="detail-user-email"><?php echo htmlspecialchars($_SESSION['user_email'] ?? 'Carregando...'); ?></p>
+                        </div>
+                        <div class="profile-detail">
+                            <p class="profile-detail-label">Telefone</p>
+                            <p class="profile-detail-value" id="detail-user-phone">Carregando...</p>
+                        </div>
+                        <div class="profile-detail">
+                            <p class="profile-detail-label">CPF</p>
+                            <p class="profile-detail-value" id="detail-user-cpf">Carregando...</p>
+                        </div>
+                        <div class="profile-detail">
+                            <p class="profile-detail-label">RG</p>
+                            <p class="profile-detail-value" id="detail-user-rg">Carregando...</p>
+                        </div>
+                        <div class="profile-detail">
+                            <p class="profile-detail-label">Data de Nascimento</p>
+                            <p class="profile-detail-value" id="detail-user-data-nascimento">Carregando...</p>
+                        </div>
+                        <div class="profile-detail">
+                            <p class="profile-detail-label">Estado Civil</p>
+                            <p class="profile-detail-value" id="detail-user-estado-civil">Carregando...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="profile-section">
+                    <h3>Endereço</h3>
+                    <div class="profile-details">
+                        <div class="profile-detail">
+                            <p class="profile-detail-label">Endereço</p>
+                            <p class="profile-detail-value" id="detail-user-endereco">Carregando...</p>
+                        </div>
+                        <div class="profile-detail">
+                            <p class="profile-detail-label">CEP</p>
+                            <p class="profile-detail-value" id="detail-user-cep">Carregando...</p>
+                        </div>
+                        <div class="profile-detail">
+                            <p class="profile-detail-label">Cidade</p>
+                            <p class="profile-detail-value" id="detail-user-cidade">Carregando...</p>
+                        </div>
+                        <div class="profile-detail">
+                            <p class="profile-detail-label">Data de Cadastro</p>
+                            <p class="profile-detail-value" id="detail-user-created-at">Carregando...</p>
+                        </div>
+                    </div>
+
+                    <div class="profile-actions">
+                        <button id="editar-perfil" class="profile-btn profile-btn-primary">Editar Perfil</button>
+                        <button id="alterar-senha" class="profile-btn profile-btn-secondary">Alterar Senha</button>
+                    </div>
+                </div>
+            </div>
         </div>
-        
-        <button id="editar-perfil" class="ui-btn">Editar Perfil</button>
-        <button id="alterar-senha" class="ui-btn">Alterar Senha</button>
         
         <!-- Formulário de edição de perfil -->
         <div id="editar-perfil-form" style="display:none;">
@@ -177,84 +252,109 @@ $(document).on('pageinit', '#perfilPageCliente', function() {
             if(response.success) {
                 $('#user-name').text(response.user.nome || 'Não informado');
                 $('#user-email').text(response.user.email || 'Não informado');
-                
+
+                // Populate the detailed profile information
+                $('#detail-user-name').text(response.user.nome || 'Não informado');
+                $('#detail-user-email').text(response.user.email || 'Não informado');
+
                 // Formatar telefone
                 if(response.user.telefone) {
                     const telefone = response.user.telefone;
                     let formattedTelefone = telefone;
-                    
+
                     // Verifica se o telefone tem 11 dígitos (com 9º dígito)
                     if(telefone.length === 11) {
                         // Formato: (XX) XXXXX-XXXX
                         formattedTelefone = telefone.replace(/^(\d{2})(\d{5})(\d{4})$/, '($1) $2-$3');
-                    } 
+                    }
                     // Verifica se o telefone tem 10 dígitos (sem 9º dígito)
                     else if(telefone.length === 10) {
                         // Formato: (XX) XXXX-XXXX
                         formattedTelefone = telefone.replace(/^(\d{2})(\d{4})(\d{4})$/, '($1) $2-$3');
                     }
-                    
+
                     $('#user-phone').text(formattedTelefone);
+                    $('#detail-user-phone').text(formattedTelefone);
                 } else {
                     $('#user-phone').text('Não informado');
+                    $('#detail-user-phone').text('Não informado');
                 }
-                
+
                 // Formatar CPF
                 if(response.user.cpf) {
                     const cpf = response.user.cpf;
                     // Adiciona formatação para o CPF XXX.XXX.XXX-XX
                     const formattedCpf = cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
                     $('#user-cpf').text(formattedCpf);
+                    $('#detail-user-cpf').text(formattedCpf);
                 } else {
                     $('#user-cpf').text('Não informado');
+                    $('#detail-user-cpf').text('Não informado');
                 }
-                
+
                 // Exibir RG
-                $('#user-rg').text(response.user.rg || 'Não informado');
-                
+                const rgValue = response.user.rg || 'Não informado';
+                $('#user-rg').text(rgValue);
+                $('#detail-user-rg').text(rgValue);
+
                 // Formatar e exibir data de nascimento
                 if(response.user.data_nascimento) {
                     // Converter string de data para o formato correto sem ajuste de fuso horário
                     const [year, month, day] = response.user.data_nascimento.split('-');
                     const date = new Date(year, month - 1, day); // month - 1 porque Janeiro é 0
-                    $('#user-data-nascimento').text(date.toLocaleDateString('pt-BR'));
+                    const formattedDate = date.toLocaleDateString('pt-BR');
+                    $('#user-data-nascimento').text(formattedDate);
+                    $('#detail-user-data-nascimento').text(formattedDate);
                 } else {
                     $('#user-data-nascimento').text('Não informado');
+                    $('#detail-user-data-nascimento').text('Não informado');
                 }
-                
+
                 // Exibir estado civil
-                $('#user-estado-civil').text(response.user.estado_civil || 'Não informado');
-                
+                const estadoCivilValue = response.user.estado_civil || 'Não informado';
+                $('#user-estado-civil').text(estadoCivilValue);
+                $('#detail-user-estado-civil').text(estadoCivilValue);
+
                 // Exibir endereço completo
                 const rua = response.user.rua || '';
                 const numero = response.user.numero || '';
                 const bairro = response.user.bairro || '';
-                
+
                 if(rua || numero || bairro) {
-                    $('#user-endereco').text(`${rua}, ${numero} - ${bairro}`);
+                    const endereco = `${rua}, ${numero} - ${bairro}`;
+                    $('#user-endereco').text(endereco);
+                    $('#detail-user-endereco').text(endereco);
                 } else {
                     $('#user-endereco').text('Não informado');
+                    $('#detail-user-endereco').text('Não informado');
                 }
-                
+
                 // Exibir CEP
                 if(response.user.cep) {
                     const cep = response.user.cep;
                     // Formata CEP no formato XXXXX-XXX
                     const formattedCep = cep.replace(/^(\d{5})(\d{3})$/, '$1-$2');
                     $('#user-cep').text(formattedCep);
+                    $('#detail-user-cep').text(formattedCep);
                 } else {
                     $('#user-cep').text('Não informado');
+                    $('#detail-user-cep').text('Não informado');
                 }
-                
+
                 // Exibir cidade
-                $('#user-cidade').text(response.user.cidade || 'Não informado');
-                
+                const cidadeValue = response.user.cidade || 'Não informado';
+                $('#user-cidade').text(cidadeValue);
+                $('#detail-user-cidade').text(cidadeValue);
+
                 // Formatar e exibir data de cadastro
                 if(response.user.created_at) {
                     const date = new Date(response.user.created_at);
-                    $('#user-created-at').text(date.toLocaleDateString('pt-BR') + ' ' + date.toLocaleTimeString('pt-BR'));
+                    const formattedDate = date.toLocaleDateString('pt-BR') + ' ' + date.toLocaleTimeString('pt-BR');
+                    $('#user-created-at').text(formattedDate);
+                    $('#detail-user-created-at').text(formattedDate);
                 } else {
                     $('#user-created-at').text('Não informado');
+                    $('#detail-user-created-at').text('Não informado');
                 }
             }
         },
@@ -269,6 +369,16 @@ $(document).on('pageinit', '#perfilPageCliente', function() {
             $('#user-cep').text('Erro ao carregar');
             $('#user-cidade').text('Erro ao carregar');
             $('#user-created-at').text('Erro ao carregar');
+            // Also update detail elements
+            $('#detail-user-phone').text('Erro ao carregar');
+            $('#detail-user-cpf').text('Erro ao carregar');
+            $('#detail-user-rg').text('Erro ao carregar');
+            $('#detail-user-data-nascimento').text('Erro ao carregar');
+            $('#detail-user-estado-civil').text('Erro ao carregar');
+            $('#detail-user-endereco').text('Erro ao carregar');
+            $('#detail-user-cep').text('Erro ao carregar');
+            $('#detail-user-cidade').text('Erro ao carregar');
+            $('#detail-user-created-at').text('Erro ao carregar');
         }
     });
 
@@ -320,8 +430,7 @@ $(document).on('pageinit', '#perfilPageCliente', function() {
                     
                     // Exibir o formulário de edição e ocultar as informações atuais
                     $('#editar-perfil-form').show();
-                    $('.card').first().hide();
-                    $('#alterar-senha').hide();
+                    $('.profile-container').hide();
                 }
             },
             error: function() {
@@ -389,8 +498,7 @@ $(document).on('pageinit', '#perfilPageCliente', function() {
     // Evento para cancelar a edição
     $(document).on('click', '#cancelar-edicao', function() {
         $('#editar-perfil-form').hide();
-        $('.card').first().show();
-        $('#alterar-senha').show();
+        $('.profile-container').show();
     });
     
     // Evento para submeter o formulário de edição
@@ -440,7 +548,9 @@ $(document).on('pageinit', '#perfilPageCliente', function() {
                     // Atualizar os dados na visualização normal
                     $('#user-name').text(formData.nome);
                     $('#user-email').text(formData.email);
-                    
+                    $('#detail-user-name').text(formData.nome);
+                    $('#detail-user-email').text(formData.email);
+
                     // Formatar e atualizar telefone
                     let formattedTelefone = formData.telefone;
                     if(formData.telefone.length === 11) {
@@ -449,46 +559,62 @@ $(document).on('pageinit', '#perfilPageCliente', function() {
                         formattedTelefone = formData.telefone.replace(/^(\d{2})(\d{4})(\d{4})$/, '($1) $2-$3');
                     }
                     $('#user-phone').text(formattedTelefone);
-                    
+                    $('#detail-user-phone').text(formattedTelefone);
+
                     // Formatar e atualizar CPF
                     let formattedCpf = formData.cpf;
                     if(formData.cpf.length === 11) {
                         formattedCpf = formData.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
                     }
                     $('#user-cpf').text(formattedCpf);
-                    
+                    $('#detail-user-cpf').text(formattedCpf);
+
                     // Atualizar outros campos
-                    $('#user-rg').text(formData.rg || 'Não informado');
+                    const rgValue = formData.rg || 'Não informado';
+                    $('#user-rg').text(rgValue);
+                    $('#detail-user-rg').text(rgValue);
+
                     // Converter string de data para o formato correto sem ajuste de fuso horário
                     const [year, month, day] = formData.data_nascimento.split('-');
                     const date = new Date(year, month - 1, day); // month - 1 porque Janeiro é 0
-                    $('#user-data-nascimento').text(date.toLocaleDateString('pt-BR'));
-                    $('#user-estado-civil').text(formData.estado_civil);
-                    
+                    const formattedDate = date.toLocaleDateString('pt-BR');
+                    $('#user-data-nascimento').text(formattedDate);
+                    $('#detail-user-data-nascimento').text(formattedDate);
+
+                    const estadoCivilValue = formData.estado_civil || 'Não informado';
+                    $('#user-estado-civil').text(estadoCivilValue);
+                    $('#detail-user-estado-civil').text(estadoCivilValue);
+
                     // Atualizar endereço com verificação de campos vazios
                     const rua = formData.rua || '';
                     const numero = formData.numero || '';
                     const bairro = formData.bairro || '';
                     if(rua || numero || bairro) {
-                        $('#user-endereco').text(`${rua}, ${numero} - ${bairro}`);
+                        const endereco = `${rua}, ${numero} - ${bairro}`;
+                        $('#user-endereco').text(endereco);
+                        $('#detail-user-endereco').text(endereco);
                     } else {
                         $('#user-endereco').text('Não informado');
+                        $('#detail-user-endereco').text('Não informado');
                     }
-                    
+
                     // Formatar CEP apenas se tiver valor
                     if(formData.cep) {
                         const formattedCep = formData.cep.replace(/^(\d{5})(\d{3})$/, '$1-$2');
                         $('#user-cep').text(formattedCep);
+                        $('#detail-user-cep').text(formattedCep);
                     } else {
                         $('#user-cep').text('Não informado');
+                        $('#detail-user-cep').text('Não informado');
                     }
-                    
-                    $('#user-cidade').text(formData.cidade || 'Não informado');
+
+                    const cidadeValue = formData.cidade || 'Não informado';
+                    $('#user-cidade').text(cidadeValue);
+                    $('#detail-user-cidade').text(cidadeValue);
                     
                     // Fechar o formulário de edição
                     $('#editar-perfil-form').hide();
-                    $('.card').first().show();
-                    $('#alterar-senha').show();
+                    $('.profile-container').show();
                 } else {
                     Swal.fire({
                         title: 'Erro!',
@@ -519,18 +645,16 @@ $(document).on('pageinit', '#perfilPageCliente', function() {
     $('#alterar-senha').on('click', function() {
         // Limpar o formulário
         $('#senha-change-form')[0].reset();
-        
+
         // Exibir o formulário de alteração de senha e ocultar as informações atuais
         $('#alterar-senha-form').show();
-        $('.card').first().hide();
-        $('#editar-perfil').hide();
+        $('.profile-container').hide();
     });
-    
+
     // Evento para cancelar a alteração de senha
     $(document).on('click', '#cancelar-senha', function() {
         $('#alterar-senha-form').hide();
-        $('.card').first().show();
-        $('#editar-perfil').show();
+        $('.profile-container').show();
     });
     
     // Evento para submeter o formulário de alteração de senha
@@ -577,8 +701,7 @@ $(document).on('pageinit', '#perfilPageCliente', function() {
                     
                     // Fechar o formulário de alteração de senha
                     $('#alterar-senha-form').hide();
-                    $('.card').first().show();
-                    $('#editar-perfil').show();
+                    $('.profile-container').show();
                 } else {
                     Swal.fire({
                         title: 'Erro!',
