@@ -374,7 +374,7 @@ function confirmReserva() {
                         <div style="margin-top: 15px; border-top: 1px solid #7f8c8d; padding-top: 15px;">
                             <p style="font-size: 10px; margin-bottom: 8px; color: #bdc3c7;">Ou copie a chave PIX:</p>
                             <div class="pix-copy-paste">
-                                <input type="text" id="pix-key-input" value="` + (response.pix_key || response.qr_code) + `" readonly style="color: #2c3e50; background-color: #ffffff; padding: 5px; border-radius: 4px; width: 75%; font-size: 10px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none;" ontouchstart="this.scrollLeft=0" ontouchmove="this.scrollLeft=0" onscroll="this.scrollLeft=0">
+                                <input type="text" id="pix-key-input" value="` + (response.pix_key || response.qr_code) + `" readonly style="color: #2c3e50; background-color: #ffffff; padding: 5px; border-radius: 4px; width: 75%; font-size: 10px; overflow: auto; white-space: pre-wrap; text-overflow: clip; user-select: text; -webkit-user-select: text; -moz-user-select: text; -ms-user-select: text;" ontouchstart="this.scrollLeft=0" ontouchmove="this.scrollLeft=0" onscroll="this.scrollLeft=0" onclick="this.select();" onfocus="this.select();">
                                 <button id="copy-pix-key-btn" style="margin-left: 5px; padding: 5px 8px; background-color: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 10px;"><i class="fas fa-copy"></i></button>
                             </div>
                         </div>
@@ -425,7 +425,7 @@ function confirmReserva() {
                         <div style="margin-top: 15px; border-top: 1px solid #7f8c8d; padding-top: 15px;">
                             <p style="font-size: 10px; margin-bottom: 8px; color: #bdc3c7;">Ou copie a chave PIX:</p>
                             <div class="pix-copy-paste">
-                                <input type="text" id="pix-key-input" value="` + (response.pix_key || response.qr_code) + `" readonly style="color: #2c3e50; background-color: #ffffff; padding: 5px; border-radius: 4px; width: 75%; font-size: 10px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none;" ontouchstart="this.scrollLeft=0" ontouchmove="this.scrollLeft=0" onscroll="this.scrollLeft=0">
+                                <input type="text" id="pix-key-input" value="` + (response.pix_key || response.qr_code) + `" readonly style="color: #2c3e50; background-color: #ffffff; padding: 5px; border-radius: 4px; width: 75%; font-size: 10px; overflow: auto; white-space: pre-wrap; text-overflow: clip; user-select: text; -webkit-user-select: text; -moz-user-select: text; -ms-user-select: text;" ontouchstart="this.scrollLeft=0" ontouchmove="this.scrollLeft=0" onscroll="this.scrollLeft=0" onclick="this.select();" onfocus="this.select();">
                                 <button id="copy-pix-key-btn" style="margin-left: 5px; padding: 5px 8px; background-color: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 10px;"><i class="fas fa-copy"></i></button>
                             </div>
                         </div>
@@ -477,7 +477,7 @@ function confirmReserva() {
                         <div style="margin-top: 15px; border-top: 1px solid #7f8c8d; padding-top: 15px;">
                             <p style="font-size: 10px; margin-bottom: 8px; color: #bdc3c7;">Ou copie a chave PIX:</p>
                             <div class="pix-copy-paste">
-                                <input type="text" id="pix-key-input" value="` + (response.pix_key || response.qr_code) + `" readonly style="color: #2c3e50; background-color: #ffffff; padding: 5px; border-radius: 4px; width: 75%; font-size: 10px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none;" ontouchstart="this.scrollLeft=0" ontouchmove="this.scrollLeft=0" onscroll="this.scrollLeft=0">
+                                <input type="text" id="pix-key-input" value="` + (response.pix_key || response.qr_code) + `" readonly style="color: #2c3e50; background-color: #ffffff; padding: 5px; border-radius: 4px; width: 75%; font-size: 10px; overflow: auto; white-space: pre-wrap; text-overflow: clip; user-select: text; -webkit-user-select: text; -moz-user-select: text; -ms-user-select: text;" ontouchstart="this.scrollLeft=0" ontouchmove="this.scrollLeft=0" onscroll="this.scrollLeft=0" onclick="this.select();" onfocus="this.select();">
                                 <button id="copy-pix-key-btn" style="margin-left: 5px; padding: 5px 8px; background-color: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 10px;"><i class="fas fa-copy"></i></button>
                             </div>
                         </div>
@@ -1007,7 +1007,7 @@ document.addEventListener('DOMContentLoaded', function() {
             <div style="margin-top: 15px; border-top: 1px solid #7f8c8d; padding-top: 15px;">
                 <p style="font-size: 10px; margin-bottom: 8px; color: #bdc3c7;">Ou copie a chave PIX:</p>
                 <div class="pix-copy-paste">
-                    <input type="text" id="pix-key-input" value="Aguardando geração do código..." readonly style="overflow: hidden; white-space: nowrap; text-overflow: ellipsis; user-select: none; -webkit-user-select: none; -moz-user-select: none; -ms-user-select: none;" ontouchstart="this.scrollLeft=0" ontouchmove="this.scrollLeft=0" onscroll="this.scrollLeft=0">
+                    <input type="text" id="pix-key-input" value="Aguardando geração do código..." readonly style="overflow: auto; white-space: pre-wrap; text-overflow: clip; user-select: text; -webkit-user-select: text; -moz-user-select: text; -ms-user-select: text;" ontouchstart="this.scrollLeft=0" ontouchmove="this.scrollLeft=0" onscroll="this.scrollLeft=0" onclick="this.select();" onfocus="this.select();">
                     <button id="copy-pix-key-btn"><i class="fas fa-copy"></i></button>
                 </div>
             </div>
@@ -1427,24 +1427,213 @@ $(document).ready(function() {
     $(document).on('click', '#copy-pix-key-btn', function() {
         const pixKeyInput = document.getElementById('pix-key-input');
         if (pixKeyInput) {
-            pixKeyInput.select();
-            document.execCommand('copy');
-            
-            // Mostrar feedback visual
-            const originalText = $(this).html();
-            $(this).html('<i class="fas fa-check"></i>');
-            setTimeout(() => {
-                $(this).html(originalText);
-            }, 2000);
-            
-            Swal.fire({
-                title: 'Sucesso!',
-                text: 'Chave PIX copiada para a área de transferência!',
-                icon: 'success',
-                confirmButtonText: 'OK',
-            });
+            // Try to use modern Clipboard API first (for better iOS support)
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(pixKeyInput.value).then(function() {
+                    // Mostrar feedback visual
+                    const originalText = $(this).html();
+                    $(this).html('<i class="fas fa-check"></i>');
+                    setTimeout(() => {
+                        $(this).html(originalText);
+                    }, 2000);
+
+                    Swal.fire({
+                        title: 'Sucesso!',
+                        text: 'Chave PIX copiada para a área de transferência!',
+                        icon: 'success',
+                        confirmButtonText: 'OK',
+                    });
+                }.bind(this)).catch(function(err) {
+                    // Fallback to document.execCommand for older browsers
+                    console.error('Erro ao copiar com Clipboard API:', err);
+                    fallbackCopyText(pixKeyInput);
+                });
+            } else {
+                // Fallback for browsers that don't support Clipboard API
+                fallbackCopyText(pixKeyInput);
+            }
         }
     });
+
+    // Fallback function for copying text that works better on iOS
+    function fallbackCopyText(inputElement) {
+        // Create a temporary textarea element since input.select() doesn't work well on iOS
+        const textArea = document.createElement('textarea');
+        textArea.value = inputElement.value;
+        // Move textarea off-screen to prevent scrolling to the bottom
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        textArea.style.top = '-999999px';
+        textArea.style.opacity = '0';
+        textArea.style.pointerEvents = 'none';
+        textArea.style.zIndex = '-999999';
+        document.body.appendChild(textArea);
+
+        // iOS specific approach - need to add to DOM before selection
+        if (/iPad|iPhone|iPod|Macintosh|mac os/i.test(navigator.userAgent)) {
+            // For iOS, we need to add the element, then focus and select
+            textArea.focus();
+            textArea.setSelectionRange(0, textArea.value.length);
+        } else {
+            // For other browsers, select works fine
+            textArea.select();
+        }
+
+        try {
+            // Copy the text
+            let successful = false;
+            if (navigator.clipboard && window.isSecureContext) {
+                // Try using clipboard API as fallback if available
+                navigator.clipboard.writeText(inputElement.value).then(() => {
+                    successful = true;
+                }).catch(() => {
+                    // If clipboard API fails, fall back to execCommand
+                    successful = document.execCommand('copy');
+                });
+            } else {
+                // Use older execCommand method
+                successful = document.execCommand('copy');
+            }
+
+            if (successful) {
+                // Mostrar feedback visual
+                const originalText = $('#copy-pix-key-btn').html();
+                $('#copy-pix-key-btn').html('<i class="fas fa-check"></i>');
+                setTimeout(() => {
+                    $('#copy-pix-key-btn').html(originalText);
+                }, 2000);
+
+                Swal.fire({
+                    title: 'Sucesso!',
+                    text: 'Chave PIX copiada para a área de transferência!',
+                    icon: 'success',
+                    confirmButtonText: 'OK',
+                });
+            } else {
+                // Fallback for when copy fails
+                // On iOS, sometimes we need to show the text to let users manually select and copy
+                // Create a more user-friendly manual copy interface
+                const manualCopyHtml = '<div style="position: relative;">' +
+                                      '<div style="background-color: #f1f1f1; padding: 10px; border-radius: 4px; margin-top: 10px; user-select: text; -webkit-user-select: text; overflow-wrap: break-word; word-break: break-all;">' +
+                                      inputElement.value + '</div>' +
+                                      '<button id="select-all-text-btn" style="margin-top: 8px; padding: 6px 10px; background-color: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">Selecionar Tudo</button>' +
+                                      '</div>';
+
+                Swal.fire({
+                    title: 'Cópia Manual Necessária',
+                    html: '<p>Selecione e copie manualmente o texto abaixo:</p>' + manualCopyHtml,
+                    icon: 'info',
+                    confirmButtonText: 'OK',
+                    confirmButtonColor: '#3498db',
+                    didOpen: () => {
+                        // Add event listener for the select all button
+                        document.getElementById('select-all-text-btn').addEventListener('click', function() {
+                            const textDiv = document.querySelector('div[style*="background-color: #f1f1f1"]');
+                            if (textDiv) {
+                                // Create temporary textarea for selection
+                                const tempTextArea = document.createElement('textarea');
+                                tempTextArea.value = inputElement.value;
+                                tempTextArea.style.position = 'fixed';
+                                tempTextArea.style.left = '-999999px';
+                                tempTextArea.style.top = '-999999px';
+                                tempTextArea.style.opacity = '0';
+                                document.body.appendChild(tempTextArea);
+                                tempTextArea.focus();
+                                tempTextArea.select();
+
+                                try {
+                                    const success = document.execCommand('copy');
+                                    if (success) {
+                                        Swal.fire({
+                                            title: 'Sucesso!',
+                                            text: 'Chave PIX copiada para a área de transferência!',
+                                            icon: 'success',
+                                            confirmButtonText: 'OK',
+                                        });
+                                    } else {
+                                        // On iOS, just focus and select the text in the div
+                                        if (window.getSelection) {
+                                            const selection = window.getSelection();
+                                            const range = document.createRange();
+                                            range.selectNodeContents(textDiv);
+                                            selection.removeAllRanges();
+                                            selection.addRange(range);
+                                        }
+                                    }
+                                } catch (e) {
+                                    console.error('Error during select all:', e);
+                                } finally {
+                                    document.body.removeChild(tempTextArea);
+                                }
+                            }
+                        });
+                    }
+                });
+            }
+        } catch (err) {
+            console.error('Erro ao copiar texto:', err);
+            // Show manual copy instructions for iOS
+            const manualCopyHtml = '<div style="position: relative;">' +
+                                  '<div style="background-color: #f1f1f1; padding: 10px; border-radius: 4px; margin-top: 10px; user-select: text; -webkit-user-select: text; overflow-wrap: break-word; word-break: break-all;">' +
+                                  inputElement.value + '</div>' +
+                                  '<button id="select-all-text-btn" style="margin-top: 8px; padding: 6px 10px; background-color: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">Selecionar Tudo</button>' +
+                                  '</div>';
+
+            Swal.fire({
+                title: 'Cópia Manual Necessária',
+                html: '<p>Selecione e copie manualmente o texto abaixo:</p>' + manualCopyHtml,
+                icon: 'info',
+                confirmButtonText: 'OK',
+                confirmButtonColor: '#3498db',
+                didOpen: () => {
+                    // Add event listener for the select all button
+                    document.getElementById('select-all-text-btn').addEventListener('click', function() {
+                        const textDiv = document.querySelector('div[style*="background-color: #f1f1f1"]');
+                        if (textDiv) {
+                            // Create temporary textarea for selection
+                            const tempTextArea = document.createElement('textarea');
+                            tempTextArea.value = inputElement.value;
+                            tempTextArea.style.position = 'fixed';
+                            tempTextArea.style.left = '-999999px';
+                            tempTextArea.style.top = '-999999px';
+                            tempTextArea.style.opacity = '0';
+                            document.body.appendChild(tempTextArea);
+                            tempTextArea.focus();
+                            tempTextArea.select();
+
+                            try {
+                                const success = document.execCommand('copy');
+                                if (success) {
+                                    Swal.fire({
+                                        title: 'Sucesso!',
+                                        text: 'Chave PIX copiada para a área de transferência!',
+                                        icon: 'success',
+                                        confirmButtonText: 'OK',
+                                    });
+                                } else {
+                                    // On iOS, just focus and select the text in the div
+                                    if (window.getSelection) {
+                                        const selection = window.getSelection();
+                                        const range = document.createRange();
+                                        range.selectNodeContents(textDiv);
+                                        selection.removeAllRanges();
+                                        selection.addRange(range);
+                                    }
+                                }
+                            } catch (e) {
+                                console.error('Error during select all:', e);
+                            } finally {
+                                document.body.removeChild(tempTextArea);
+                            }
+                        }
+                    });
+                }
+            });
+        } finally {
+            // Remove the temporary textarea
+            document.body.removeChild(textArea);
+        }
+    }
     
     
     // Manipulador para o botão de confirmação de pagamento

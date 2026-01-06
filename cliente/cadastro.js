@@ -101,11 +101,11 @@ $(document).on('pageinit', '#cadastroPageCliente', function() {
         console.log('Dados do formulário:', formData);
         
         // Validação dos campos
-        if (!formData.nome || !formData.rg || !formData.cpf || !formData.estado_civil || 
-            !formData.rg || !formData.rua || !formData.numero || !formData.bairro || !formData.cep || 
-            !formData.cidade || !formData.telefone || !formData.data_nascimento || 
+        if (!formData.nome || !formData.rg || !formData.cpf || !formData.estado_civil ||
+            !formData.rua || !formData.numero || !formData.bairro || !formData.cep ||
+            !formData.cidade || !formData.telefone || !formData.data_nascimento ||
             !formData.email || !formData.senha) {
-            
+
             console.log('Validação falhou - campos obrigatórios vazios');
             Swal.fire({
                 title: 'Erro!',
@@ -130,12 +130,13 @@ $(document).on('pageinit', '#cadastroPageCliente', function() {
                     console.log('Cadastro realizado com sucesso!');
                     Swal.fire({
                         title: 'Sucesso!',
-                        text: response.message,
+                        text: response.message || 'Cadastro realizado com sucesso!',
                         icon: 'success',
                         confirmButtonText: 'OK'
                     }).then(function() {
-                        // Redirecionar para a página de reservas
-                        window.location.href = 'https://chacararecantodosossegorr.com.br/repo_limpo/cliente/reserva.php';
+                        // Redirecionar para a página especificada no response ou usar a padrão
+                        var redirectUrl = response.redirect || 'https://chacararecantodosossegorr.com.br/repo_limpo/cliente/reserva.php';
+                        window.location.href = redirectUrl;
                     });
                 } else {
                     console.log('Erro no cadastro:', response.message);
