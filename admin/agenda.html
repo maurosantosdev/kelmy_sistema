@@ -1,3 +1,4 @@
+// No início do arquivo, antes de qualquer processamento
 <!DOCTYPE html>
 <html>
 <head>
@@ -101,45 +102,67 @@
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <!-- ***** SCRIPT DA MÁSCARA ADICIONADO AQUI ***** -->
-<script>
-// Aguarda a página da agenda ser inicializada pelo jQuery Mobile
-$(document).on('pageinit', '#agendaPage', function() {
-    const precoInput = document.getElementById('preco');
+// Substitua o script da máscara no final do HTML por este:
 
-    // Função para formatar o valor como moeda brasileira (R$)
-    function formatCurrency(input) {
-        if (!input) return;
-        let value = input.value;
-        // 1. Remove tudo que não for dígito
-        value = value.replace(/\D/g, ""); 
-        if (value === "") {
-            input.value = "";
-            return;
-        }
-        // 2. Remove zeros à esquerda para evitar "0700,00"
-        value = value.replace(/^0+/, ''); 
+
+
+<script>
+$(document).on('pageinit', '#agendaPage', function() {
+    const precoInput = $('#preco');
+    const priceForm = $('#priceForm');
+
+    // Formatação
+    precoInput.on('input', function(e) {
+        let valor = e.target.value.replace(/\D/g, '');
+        let numero = parseInt(valor || '0');
+        let reais = (numero / 100).toFixed(2);
+        let partes = reais.split('.');
+        let milhar = partes[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+        e.target.value = milhar + ',' + partes[1];
+    });
+
+    priceForm.on('submit', function(e) {
+        let valorFormatado = precoInput.val();
+        let valorDecimal = valorFormatado.replace(/\./g, '').replace(',', '.');
         
-        // 3. Garante que sempre haja pelo menos 3 dígitos para os centavos
-        if (value.length < 3) {
-            value = '0'.repeat(3 - value.length) + value;
-        }
+        // Força o envio correto
+        e.preventDefault();
         
-        // 4. Coloca a vírgula antes dos últimos 2 dígitos
-        value = value.replace(/(\d{1,2})$/, ',$1'); 
-        // 5. Coloca um ponto como separador de milhar
-        value = value.replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1.'); 
-        
-        input.value = value;
-    }
-    
-    // 6. Adiciona o evento de 'input' para formatar enquanto o usuário digita
-    if (precoInput) {
-        precoInput.addEventListener('input', function() {
-            formatCurrency(this);
+        let formData = $(this).serializeArray();
+        // Remove qualquer 'preco' existente
+        formData = formData.filter(function(item) {
+            return item.name !== 'preco' && item.name !== 'preco_visual';
         });
-    }
+        // Adiciona o valor correto
+        formData.push({name: 'preco', value: valorDecimal});
+        
+        console.log('=== ENVIANDO ===');
+        console.log('Formatado:', valorFormatado);
+        console.log('Decimal:', valorDecimal);
+        console.log('================');
+        
+        // Envia via AJAX para ter controle total
+        $.ajax({
+            url: $(this).attr('action') || '/repo_limpo/php/agenda_manager.php?action=save_period',
+            type: 'POST',
+            data: $.param(formData),
+            dataType: 'json',
+            success: function(response) {
+                if (response.success) {
+                    $('#formMessage').text(response.message).css('color', '#4CAF50');
+                    location.reload(); // Recarrega para ver o preço atualizado
+                } else {
+                    $('#formMessage').text(response.message).css('color', '#F44336');
+                }
+            },
+            error: function() {
+                $('#formMessage').text('Erro de comunicação').css('color', '#F44336');
+            }
+        });
+        
+        return false;
+    });
 });
 </script>
-
 </body>
 </html>
