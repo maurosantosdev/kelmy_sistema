@@ -1,9 +1,32 @@
 <?php
-require 'db_connect.php';
+// Detectar se é uma requisição JAVASCRIPT antes de qualquer saída
+$isJavascriptRequest = (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') || 
+                 (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] == 'XMLHttpRequest') ||
+                 (!empty($_POST['email']) && !empty($_POST['senha']));
+
+// Definir o tipo de conteúdo como JSON para requisições JAVASCRIPT
+if ($isJavascriptRequest) {
+    header('Content-Type: application/json');
+}
+
+// Incluir o arquivo de conexão com tratamento de erro
+try {
+    require 'db_connect.php';
+} catch (Exception $e) {
+    if ($isJavascriptRequest) {
+        echo json_encode(['success' => false, 'message' => 'Erro interno do servidor.']);
+    } else {
+        header("Location: https://chacararecantodosossegorr.com.br/repo_limpo/cliente/login.php?error=1");
+    }
+    exit;
+}
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    header('Content-Type: application/json');
-    echo json_encode(['success' => false, 'message' => 'Método não permitido']);
+    if ($isJavascriptRequest) {
+        echo json_encode(['success' => false, 'message' => 'Método não permitido']);
+    } else {
+        header("Location: https://chacararecantodosossegorr.com.br/repo_limpo/cliente/login.php?error=1");
+    }
     exit;
 }
 
@@ -15,29 +38,30 @@ if (session_status() == PHP_SESSION_NONE) {
 // Verificar se é uma requisição para checar a sessão
 if (isset($_POST['check_session']) && $_POST['check_session'] == '1') {
     if (isset($_SESSION['user_id'])) {
-        header('Content-Type: application/json');
-        $response = ['success' => true, 'message' => 'Usuário já está logado.'];
-        echo json_encode($response);
+        if ($isJavascriptRequest) {
+            $response = ['success' => true, 'message' => 'Usuário já está logado.'];
+            echo json_encode($response);
+        } else {
+            header("Location: https://chacararecantodosossegorr.com.br/repo_limpo/cliente/reserva.php");
+        }
     } else {
-        header('Content-Type: application/json');
-        $response = ['success' => false, 'message' => 'Usuário não está logado.'];
-        echo json_encode($response);
+        if ($isJavascriptRequest) {
+            $response = ['success' => false, 'message' => 'Usuário não está logado.'];
+            echo json_encode($response);
+        } else {
+            header("Location: https://chacararecantodosossegorr.com.br/repo_limpo/cliente/login.php");
+        }
     }
     exit;
 }
 
 // Se o usuário já estiver logado e não for uma requisição de verificação de sessão, retornar sucesso com mensagem informativa
 if (isset($_SESSION['user_id'])) {
-    // Verificar se a requisição veio via AJAX
-    if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') {
-        // Requisição AJAX - retornar JSON com sucesso e mensagem informativa
-        header('Content-Type: application/json');
+    if ($isJavascriptRequest) {
         $response = ['success' => true, 'message' => 'Usuário já está logado.'];
         echo json_encode($response);
     } else {
-        // Requisição tradicional - redirecionar para suas_reservas.php
-        header("Location: https://chacararecantodosossegorr.com.br/repo_limpo/cliente/suas_reservas.php");
-        exit();
+        header("Location: https://chacararecantodosossegorr.com.br/repo_limpo/cliente/reserva.php");
     }
     exit;
 }
@@ -48,9 +72,12 @@ $email = $_POST['email'] ?? '';
 $senha = $_POST['senha'] ?? '';
 
 if (empty($email) || empty($senha)) {
-    header('Content-Type: application/json');
     $response['message'] = 'E-mail e senha são obrigatórios';
-    echo json_encode($response);
+    if ($isJavascriptRequest) {
+        echo json_encode($response);
+    } else {
+        header("Location: https://chacararecantodosossegorr.com.br/repo_limpo/cliente/login.php?error=1");
+    }
     exit;
 }
 
@@ -66,46 +93,42 @@ if ($result->num_rows === 0) {
     error_log("BANCO - Nenhum usuário encontrado para o email: $email");
     // Para evitar timing attacks, vamos simular o tempo de verificação de senha mesmo quando o usuário não existe
     password_verify('dummy', '$2y$10$' . str_repeat('A', 22)); // Hash dummy para simular o tempo
-    header('Content-Type: application/json');
-    $response['message'] = 'E-mail ou senha incorretos';
-    echo json_encode($response);
+    
+    if ($isJavascriptRequest) {
+        $response['message'] = 'E-mail ou senha incorretos';
+        echo json_encode($response);
+    } else {
+        header("Location: https://chacararecantodosossegorr.com.br/repo_limpo/cliente/login.php?error=1");
+    }
 } else {
     $user = $result->fetch_assoc();
-    
+
     // Verificar senha
     if (password_verify($senha, $user['senha'])) {
         error_log("BANCO - Login bem sucedido para o email: $email");
-        
+
         // Regenerar ID da sessão para segurança
         session_regenerate_id(true);
-        
+
         $_SESSION['user_id'] = $user['id'];
         $_SESSION['user_email'] = $user['email'];
         $_SESSION['user_name'] = $user['nome'];
-        
-        // Verificar se a requisição veio via AJAX
-        if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') {
-            // Requisição AJAX - retornar JSON
-            header('Content-Type: application/json');
+
+        if ($isJavascriptRequest) {
             $response['success'] = true;
             $response['message'] = 'Login realizado com sucesso!';
             echo json_encode($response);
         } else {
-            // Requisição tradicional - redirecionar
-            header("Location: https://chacararecantodosossegorr.com.br/repo_limpo/cliente/suas_reservas.php");
+            header("Location: https://chacararecantodosossegorr.com.br/repo_limpo/cliente/reserva.php");
             exit();
         }
     } else {
         error_log("BANCO - Senha incorreta para o email: $email");
-        
-        // Verificar se a requisição veio via AJAX
-        if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') {
-            // Requisição AJAX - retornar JSON
-            header('Content-Type: application/json');
+
+        if ($isJavascriptRequest) {
             $response['message'] = 'E-mail ou senha incorretos';
             echo json_encode($response);
         } else {
-            // Requisição tradicional - redirecionar de volta para login com erro
             header("Location: https://chacararecantodosossegorr.com.br/repo_limpo/cliente/login.php?error=1");
             exit();
         }

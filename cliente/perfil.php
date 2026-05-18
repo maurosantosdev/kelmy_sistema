@@ -16,22 +16,153 @@ if (!isset($_SESSION['user_id'])) {
     <title>Seu Perfil - Chácara Recanto do Sossego</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    
-    <link rel="stylesheet" href="../assets/css/jquery.mobile-1.4.5.min.css">
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="profile-styles.css">
+    <style>
+        /* Estilos responsivos para o cabeçalho com nome do usuário */
+        header.bg-white.text-dark.py-3 {
+            padding: 0.75rem 0 !important;
+        }
+
+        header .h5 {
+            font-size: 1rem;
+            margin-bottom: 0;
+        }
+
+        @media (max-width: 768px) {
+            header.bg-white.text-dark.py-3 {
+                padding: 0.6rem 0 !important;
+            }
+
+            header .h5 {
+                font-size: 0.9rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            header.bg-white.text-dark.py-3 {
+                padding: 0.5rem 0 !important;
+            }
+
+            header .h5 {
+                font-size: 0.85rem;
+            }
+        }
+
+        @media (max-width: 400px) {
+            header.bg-white.text-dark.py-3 {
+                padding: 0.4rem 0 !important;
+            }
+
+            header .h5 {
+                font-size: 0.8rem;
+            }
+        }
+
+        @media (max-width: 350px) {
+            header.bg-white.text-dark.py-3 {
+                padding: 0.3rem 0 !important;
+            }
+
+            header .h5 {
+                font-size: 0.75rem;
+            }
+        }
+
+        @media (max-width: 300px) and (max-height: 660px) {
+            header.bg-white.text-dark.py-3 {
+                padding: 0.25rem 0 !important;
+            }
+
+            header .h5 {
+                font-size: 0.7rem;
+            }
+        }
+
+        /* Estilo para o container do header */
+        .d-flex.justify-content-between.align-items-center {
+            gap: 0.25rem;
+        }
+
+        @media (max-width: 400px) {
+            .d-flex.justify-content-between.align-items-center {
+                gap: 0.2rem;
+            }
+        }
+
+        @media (max-width: 350px) {
+            .d-flex.justify-content-between.align-items-center {
+                gap: 0.15rem;
+            }
+        }
+
+        @media (max-width: 300px) and (max-height: 660px) {
+            .d-flex.justify-content-between.align-items-center {
+                gap: 0.1rem;
+            }
+        }
+
+        /* Estilo específico para o botão no header */
+        header .btn.btn-light.btn-sm {
+            min-height: 1.5rem;
+            min-width: auto;
+            padding: 0.25rem 0.5rem;
+            font-size: 0.875rem;
+        }
+
+        @media (max-width: 768px) {
+            header .btn.btn-light.btn-sm {
+                padding: 0.2rem 0.4rem;
+                font-size: 0.8rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            header .btn.btn-light.btn-sm {
+                padding: 0.15rem 0.3rem;
+                font-size: 0.75rem;
+            }
+        }
+
+        @media (max-width: 400px) {
+            header .btn.btn-light.btn-sm {
+                padding: 0.12rem 0.25rem;
+                font-size: 0.7rem;
+            }
+        }
+
+        @media (max-width: 350px) {
+            header .btn.btn-light.btn-sm {
+                padding: 0.1rem 0.2rem;
+                font-size: 0.65rem;
+            }
+        }
+
+        @media (max-width: 300px) and (max-height: 660px) {
+            header .btn.btn-light.btn-sm {
+                min-height: 1.1rem;
+                padding: 0.05rem 0.15rem !important;
+                font-size: 0.6rem;
+            }
+        }
+    </style>
 </head>
 <body>
 
-<div data-role="page" id="perfilPageCliente">
+<div id="perfilPageCliente" class="container-fluid">
+    <header class="bg-white text-dark py-3">
+        <div class="container">
+            <div class="d-flex justify-content-between align-items-center">
+                <h1 class="h5 mb-0" id="header-title-perfil">Seu Perfil</h1>
+                <a href="#" id="logout-link" class="btn btn-light btn-sm">Sair</a>
+            </div>
+        </div>
+    </header>
 
-    <div data-role="header" data-position="fixed">
-        <h1 id="header-title-perfil">Seu Perfil</h1>
-        <a href="#" id="logout-link" class="ui-btn-right ui-btn ui-corner-all">Sair</a>
-    </div>
-
-    <div role="main" class="ui-content" style="padding: 0;">
+    <main class="container" style="padding-top: 30px; padding-bottom: 80px;">
         <div class="profile-container">
             <div class="profile-header">
                 <div class="profile-avatar"><?php echo strtoupper(substr(htmlspecialchars($_SESSION['user_name'] ?? 'C'), 0, 1)); ?></div>
@@ -127,8 +258,9 @@ if (!isset($_SESSION['user_id'])) {
         <!-- Formulário de edição de perfil -->
         <div id="editar-perfil-form" style="display:none;">
             <div class="card">
-                <h2>Editar Perfil</h2>
-                <form id="perfil-edit-form">
+                <div style="max-height: 70vh; overflow-y: auto; padding: 15px;">
+                    <h2>Editar Perfil</h2>
+                    <form id="perfil-edit-form">
                     <label for="edit-nome">Nome:</label>
                     <input type="text" id="edit-nome" name="nome" required>
                     
@@ -184,8 +316,9 @@ if (!isset($_SESSION['user_id'])) {
         <!-- Formulário de alteração de senha -->
         <div id="alterar-senha-form" style="display:none;">
             <div class="card">
-                <h2>Alterar Senha</h2>
-                <form id="senha-change-form">
+                <div style="max-height: 70vh; overflow-y: auto; padding: 15px;">
+                    <h2>Alterar Senha</h2>
+                    <form id="senha-change-form">
                     <label for="senha-atual">Senha Atual:</label>
                     <input type="password" id="senha-atual" name="senha_atual" required>
                     
@@ -204,20 +337,42 @@ if (!isset($_SESSION['user_id'])) {
         </div>
     </div>
 
-    <div data-role="footer" data-position="fixed">
-        <div data-role="navbar">
-            <ul>
-                <li><a href="../index.php" data-ajax="false" data-icon="home">Inicio</a></li>
-                <li><a href="reserva.php" data-ajax="false" data-icon="grid">Reserve</a></li>
-                <li><a href="suas_reservas.php" data-ajax="false" data-icon="calendar">Reservas</a></li>
-                <li><a href="perfil.php" data-ajax="false" data-icon="user" class="ui-btn-active ui-state-persist">Perfil</a></li>
-            </ul>
-        </div>
-    </div>
+    </main>
 </div>
 
-<script src="../assets/js/jquery-1.11.1.min.js"></script>
-<script src="../assets/js/jquery.mobile-1.4.5.min.js"></script>
+<footer class="fixed-bottom bg-dark text-white py-2">
+    <div class="container-fluid px-0">
+        <nav class="row g-0 text-center">
+            <div class="col-3 py-2">
+                <a href="../index.php" class="text-white text-decoration-none d-block h-100 d-flex flex-column align-items-center justify-content-center">
+                    <i class="fas fa-home mb-1"></i>
+                    <small>Inicio</small>
+                </a>
+            </div>
+            <div class="col-3 py-2">
+                <a href="reserva.php" class="text-white text-decoration-none d-block h-100 d-flex flex-column align-items-center justify-content-center">
+                    <i class="fas fa-calendar-alt mb-1"></i>
+                    <small>Reserve</small>
+                </a>
+            </div>
+            <div class="col-3 py-2">
+                <a href="suas_reservas.php" class="text-white text-decoration-none d-block h-100 d-flex flex-column align-items-center justify-content-center">
+                    <i class="fas fa-calendar mb-1"></i>
+                    <small>Reservas</small>
+                </a>
+            </div>
+            <div class="col-3 py-2">
+                <a href="perfil.php" class="text-white text-decoration-none d-block h-100 d-flex flex-column align-items-center justify-content-center active">
+                    <i class="fas fa-user mb-1"></i>
+                    <small>Perfil</small>
+                </a>
+            </div>
+        </nav>
+    </div>
+</footer>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
 // Função para carregar o nome do usuário e atualizar o cabeçalho
@@ -239,10 +394,10 @@ function loadUserName() {
     });
 }
 
-$(document).on('pageinit', '#perfilPageCliente', function() {
+$(document).ready(function() {
     // Carregar o nome do usuário para atualizar o cabeçalho
     loadUserName();
-    
+
     // Carregar informações do usuário
     $.ajax({
         url: '../php/get_user_info.php',
@@ -399,7 +554,7 @@ $(document).on('pageinit', '#perfilPageCliente', function() {
                     const cpfSemFormatacao = response.user.cpf ? response.user.cpf.replace(/\D/g, '') : '';
                     $('#edit-cpf').val(cpfSemFormatacao);
                     $('#edit-rg').val(response.user.rg || '');
-                    
+
                     // Formatar data de nascimento para o formato YYYY-MM-DD
                     if(response.user.data_nascimento) {
                         // Converter string de data para o formato correto sem ajuste de fuso horário
@@ -408,10 +563,10 @@ $(document).on('pageinit', '#perfilPageCliente', function() {
                         // Para o formato YYYY-MM-DD, vamos usar a data exata do banco
                         $('#edit-data-nascimento').val(response.user.data_nascimento);
                     }
-                    
+
                     const estadoCivil = response.user.estado_civil || 'Solteiro(a)';
                     $('#edit-estado-civil').val(estadoCivil);
-                    
+
                     // Garantir que o valor foi definido corretamente
                     if (!$('#edit-estado-civil').val()) {
                         // Se não encontrou o valor exato no select, tentar encontrar a opção mais próxima
@@ -427,7 +582,7 @@ $(document).on('pageinit', '#perfilPageCliente', function() {
                     $('#edit-bairro').val(response.user.bairro || '');
                     $('#edit-cep').val(response.user.cep || '');
                     $('#edit-cidade').val(response.user.cidade || '');
-                    
+
                     // Exibir o formulário de edição e ocultar as informações atuais
                     $('#editar-perfil-form').show();
                     $('.profile-container').hide();
@@ -443,12 +598,12 @@ $(document).on('pageinit', '#perfilPageCliente', function() {
             }
         });
     });
-    
+
     // Função para formatar CPF enquanto o usuário digita
     $('#edit-cpf').on('input', function() {
         let value = $(this).val().replace(/\D/g, ''); // Remover tudo que não é dígito
         if (value.length > 11) value = value.slice(0, 11); // Limitar a 11 dígitos
-        
+
         if (value.length > 9) {
             // Formato: XXX.XXX.XXX-XX
             value = value.replace(/(\d{3})(\d{3})(\d{3})(\d{1,2})/, '$1.$2.$3-$4');
@@ -459,28 +614,28 @@ $(document).on('pageinit', '#perfilPageCliente', function() {
             // Formato: XXX.XXX
             value = value.replace(/(\d{3})(\d{1,3})/, '$1.$2');
         }
-        
+
         $(this).val(value);
     });
-    
+
     // Função para formatar CEP enquanto o usuário digita
     $('#edit-cep').on('input', function() {
         let value = $(this).val().replace(/\D/g, ''); // Remover tudo que não é dígito
         if (value.length > 8) value = value.slice(0, 8); // Limitar a 8 dígitos
-        
+
         if (value.length > 5) {
             // Formato: XXXXX-XXX
             value = value.replace(/(\d{5})(\d{3})/, '$1-$2');
         }
-        
+
         $(this).val(value);
     });
-    
+
     // Função para formatar telefone enquanto o usuário digita
     $('#edit-telefone').on('input', function() {
         let value = $(this).val().replace(/\D/g, ''); // Remover tudo que não é dígito
         if (value.length > 11) value = value.slice(0, 11); // Limitar a 11 dígitos
-        
+
         if (value.length > 6) {
             // Formato: (XX) XXXXX-XXXX
             value = value.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
@@ -491,30 +646,30 @@ $(document).on('pageinit', '#perfilPageCliente', function() {
             // Formato: (XX
             value = value.replace(/(\d{2})/, '($1');
         }
-        
+
         $(this).val(value);
     });
-    
+
     // Evento para cancelar a edição
     $(document).on('click', '#cancelar-edicao', function() {
         $('#editar-perfil-form').hide();
         $('.profile-container').show();
     });
-    
+
     // Evento para submeter o formulário de edição
     $('#perfil-edit-form').on('submit', function(e) {
         e.preventDefault();
-        
+
         // Desabilitar o botão de submissão para evitar múltiplos envios
         const submitBtn = $(this).find('button[type="submit"]');
         submitBtn.prop('disabled', true).text('Salvando...');
-        
+
         // Coletar os dados do formulário e remover formatação onde necessário
         const cpfLimpo = $('#edit-cpf').val().replace(/\D/g, ''); // Remover formatação do CPF
         const cepLimpo = $('#edit-cep').val().replace(/\D/g, ''); // Remover formatação do CEP
         const telefoneLimpo = $('#edit-telefone').val().replace(/\D/g, ''); // Remover formatação do telefone
         const estadoCivil = $('#edit-estado-civil').val() || 'Solteiro(a)'; // Garantir um valor padrão
-        
+
         const formData = {
             nome: $('#edit-nome').val(),
             email: $('#edit-email').val(),
@@ -529,7 +684,7 @@ $(document).on('pageinit', '#perfilPageCliente', function() {
             cep: cepLimpo,
             cidade: $('#edit-cidade').val()
         };
-        
+
         // Enviar os dados para atualização
         $.ajax({
             url: '../php/update_user_info.php',
@@ -544,7 +699,7 @@ $(document).on('pageinit', '#perfilPageCliente', function() {
                         icon: 'success',
                         confirmButtonText: 'OK'
                     });
-                    
+
                     // Atualizar os dados na visualização normal
                     $('#user-name').text(formData.nome);
                     $('#user-email').text(formData.email);
@@ -611,7 +766,7 @@ $(document).on('pageinit', '#perfilPageCliente', function() {
                     const cidadeValue = formData.cidade || 'Não informado';
                     $('#user-cidade').text(cidadeValue);
                     $('#detail-user-cidade').text(cidadeValue);
-                    
+
                     // Fechar o formulário de edição
                     $('#editar-perfil-form').hide();
                     $('.profile-container').show();
@@ -625,7 +780,7 @@ $(document).on('pageinit', '#perfilPageCliente', function() {
                 }
             },
             error: function(xhr, status, error) {
-                console.error('Erro na requisição AJAX:', error);
+                console.error('Erro na requisição JAVASCRIPT:', error);
                 console.error('Resposta do servidor:', xhr.responseText);
                 Swal.fire({
                     title: 'Erro de Comunicação',
@@ -640,7 +795,7 @@ $(document).on('pageinit', '#perfilPageCliente', function() {
             }
         });
     });
-    
+
     // Evento para abrir o formulário de alteração de senha
     $('#alterar-senha').on('click', function() {
         // Limpar o formulário
@@ -656,22 +811,22 @@ $(document).on('pageinit', '#perfilPageCliente', function() {
         $('#alterar-senha-form').hide();
         $('.profile-container').show();
     });
-    
+
     // Evento para submeter o formulário de alteração de senha
     $('#senha-change-form').on('submit', function(e) {
         e.preventDefault();
-        
+
         // Desabilitar o botão de submissão para evitar múltiplos envios
         const submitBtn = $(this).find('button[type="submit"]');
         submitBtn.prop('disabled', true).text('Alterando...');
-        
+
         // Coletar os dados do formulário
         const formData = {
             senha_atual: $('#senha-atual').val(),
             nova_senha: $('#nova-senha').val(),
             confirmar_senha: $('#confirmar-senha').val()
         };
-        
+
         // Verificar se as senhas novas coincidem
         if (formData.nova_senha !== formData.confirmar_senha) {
             Swal.fire({
@@ -683,7 +838,7 @@ $(document).on('pageinit', '#perfilPageCliente', function() {
             submitBtn.prop('disabled', false).text('Alterar Senha');
             return;
         }
-        
+
         // Enviar os dados para alteração de senha
         $.ajax({
             url: '../php/change_password.php',
@@ -698,7 +853,7 @@ $(document).on('pageinit', '#perfilPageCliente', function() {
                         icon: 'success',
                         confirmButtonText: 'OK'
                     });
-                    
+
                     // Fechar o formulário de alteração de senha
                     $('#alterar-senha-form').hide();
                     $('.profile-container').show();
@@ -712,7 +867,7 @@ $(document).on('pageinit', '#perfilPageCliente', function() {
                 }
             },
             error: function(xhr, status, error) {
-                console.error('Erro na requisição AJAX:', error);
+                console.error('Erro na requisição JAVASCRIPT:', error);
                 console.error('Resposta do servidor:', xhr.responseText);
                 Swal.fire({
                     title: 'Erro de Comunicação',
@@ -727,11 +882,11 @@ $(document).on('pageinit', '#perfilPageCliente', function() {
             }
         });
     });
-    
+
     // Manipulador para o botão de logout
     $('#logout-link').on('click', function(e) {
         e.preventDefault();
-        
+
         $.ajax({
             url: '../php/logout.php',
             type: 'POST',
@@ -739,6 +894,10 @@ $(document).on('pageinit', '#perfilPageCliente', function() {
             success: function(response) {
                 if(response.success) {
                     // Limpar possíveis dados da sessão no frontend e redirecionar de forma limpa
+                    // Forçar limpeza do cache do navegador antes de redirecionar
+                    if ('caches' in window) {
+                        caches.delete('api-cache').catch(() => {}); // Limpar cache se existir
+                    }
                     window.location.replace('login.php');
                 } else {
                     alert('Erro ao fazer logout. Por favor, tente novamente.');
@@ -753,7 +912,7 @@ $(document).on('pageinit', '#perfilPageCliente', function() {
                     confirmButtonText: 'OK'
                 }).then(function() {
                     // Mesmo em caso de erro, redirecionar para login
-                    window.location.href = 'login.php';
+                    window.location.replace('login.php'); // Usar replace para evitar histórico
                 });
             }
         });

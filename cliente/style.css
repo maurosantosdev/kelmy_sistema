@@ -475,3 +475,93 @@ div[data-role="page"] {
     border: none !important;
 }
 
+/* Additional styles for non-jQuery Mobile elements */
+.header-fixed {
+    position: relative !important;
+    height: 50px;
+    box-sizing: border-box;
+    background-color: var(--header-bg);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.header-fixed h1 {
+    font-weight: 500;
+    font-size: 1.1em;
+    margin: 0;
+    color: white;
+}
+
+.content {
+    background-color: var(--bg-dark);
+    padding: 10px !important;
+}
+
+.error-message {
+    background-color: #f8d7da;
+    color: #721c24;
+    padding: 10px;
+    border-radius: 5px;
+    margin-bottom: 10px;
+    border: 1px solid #f5c6cb;
+}
+
+.btn {
+    display: inline-block;
+    padding: 0.7em 1em;
+    margin: 0.5em;
+    text-decoration: none;
+    border-radius: 8px;
+    border: none;
+    cursor: pointer;
+    text-align: center;
+    font-size: 1em;
+    background-color: var(--header-bg);
+    color: white;
+}
+
+.footer-fixed {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background-color: var(--header-bg);
+    color: white;
+    padding: 10px 0;
+    z-index: 1000;
+}
+
+.footer-fixed nav ul {
+    display: flex;
+    justify-content: space-around;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.footer-fixed nav li {
+    flex: 1;
+    text-align: center;
+}
+
+.footer-fixed nav a {
+    display: block;
+    color: #bdc3c7;
+    text-decoration: none;
+    padding: 5px;
+    font-size: 0.9em;
+}
+
+.footer-fixed nav a.active,
+.footer-fixed nav a:hover {
+    color: white;
+}
+
+.footer-fixed nav i {
+    display: block;
+    font-size: 1.2em;
+    margin-bottom: 3px;
+}
+

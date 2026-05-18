@@ -93,6 +93,9 @@ while ($row = $result->fetch_assoc()) {
         if ($interval->i < 5 && $interval->h === 0 && $interval->d === 0) {
             $recent_status_change = true;
         }
+    } else {
+        // Garantir que o campo payment_confirmed_at seja formatado corretamente mesmo quando vazio
+        $row['payment_confirmed_at'] = $row['payment_confirmed_at'] ?: null;
     }
 
     // Verificar se o contrato para esta reserva já foi assinado e obter a data de assinatura
@@ -124,7 +127,8 @@ while ($row = $result->fetch_assoc()) {
         'status_formatado' => $status_formatado,
         'observacoes' => $row['observacoes'] ? htmlspecialchars($row['observacoes']) : '',
         'created_at' => $row['created_at'],
-        'payment_confirmed_at' => $row['payment_confirmed_at'] ? (new DateTime($row['payment_confirmed_at']))->format('Y-m-d H:i:s') : null, // Formatando a data de confirmação
+        'payment_confirmed_at' => $row['payment_confirmed_at'] ? (new DateTime($row['payment_confirmed_at']))->format('Y-m-d H:i:s') : null, // Formatando a data de confirmação para o backend
+        'payment_confirmed_at_formatted' => $row['payment_confirmed_at'] ? (new DateTime($row['payment_confirmed_at']))->format('d/m/Y H:i:s') : null, // Formatando a data de confirmação para exibição no frontend
         'payment_percentage' => $row['payment_percentage'] ?? 50, // Padrão 50% se não definido
         'tipo_porcentagem' => $row['tipo_porcentagem'] ?? '50', // Padrão '50' se não definido
         'reserva_grupo' => $row['reserva_grupo'], // Grupo de reserva para agrupar diárias

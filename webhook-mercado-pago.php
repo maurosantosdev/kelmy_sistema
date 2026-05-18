@@ -80,11 +80,11 @@ if (empty($input)) {
 if ($signature) {
     // Remover espaços em branco e tentar extrair a assinatura
     $signature = trim($signature);
-    
+
     // Mercado Pago pode enviar a assinatura em diferentes formatos
     // Normalmente no formato: "ts={timestamp},v1={signature}" ou apenas "{signature}"
     $signature_value = null;
-    
+
     // Tenta extrair o valor da assinatura do formato "ts=timestamp,v1=signature"
     if (strpos($signature, 'v1=') !== false) {
         $parts = explode(',', $signature);
@@ -99,11 +99,11 @@ if ($signature) {
         // Se não estiver no formato ts,v1 assume que é apenas a assinatura
         $signature_value = $signature;
     }
-    
+
     if ($signature_value) {
         // Carregar a chave secreta do webhook do Mercado Pago
         $webhook_secret = '';
-        
+
         // Primeiro tenta obter do arquivo de configuração
         if (file_exists('php/mp_webhook_secret.php')) {
             require_once 'php/mp_webhook_secret.php';
@@ -111,7 +111,7 @@ if ($signature) {
                 $webhook_secret = MP_WEBHOOK_SECRET;
             }
         }
-        
+
         // Se ainda não definido, tenta obter de variável de ambiente
         if (empty($webhook_secret)) {
             $env_secret = getenv('MP_WEBHOOK_SECRET');
@@ -119,24 +119,24 @@ if ($signature) {
                 $webhook_secret = $env_secret;
             }
         }
-        
+
         // Fallback para o valor antigo (deverá ser substituído por um valor correto)
         if (empty($webhook_secret)) {
             // NOTA: Este é um fallback temporário - você DEVE configurar o webhook_secret correto
             // em seu painel do Mercado Pago e definir a chave correspondente
             $webhook_secret = 'd27402fcea742f0b3d2b0fda166aa4bf5bfe726cb6f80f3ab225bf732d802bce'; // Remover após configuração correta
         }
-        
+
         if (!empty($webhook_secret)) {
             // Calcular o HMAC-SHA256 da carga útil com a chave secreta
             // Usando SHA256 para o cálculo da assinatura, conforme documentação do Mercado Pago
             $calculated_signature = hash_hmac('sha256', $input, $webhook_secret);
-            
+
             // Verificar se a assinatura corresponde
             if (!hash_equals($signature_value, $calculated_signature)) {
                 error_log("WEBHOOK - Assinatura inválida. Assinatura recebida: {$signature_value}, Assinatura calculada: {$calculated_signature}");
                 error_log("WEBHOOK - Input usado para cálculo: " . $input);
-                
+
                 // Para permitir testes e depuração, vamos continuar processando
                 // Em ambiente de produção, você pode optar por rejeitar requisições com assinatura inválida
                 error_log("WEBHOOK - Continuando processamento mesmo com assinatura inválida (para fins de debug)");
@@ -154,6 +154,9 @@ if ($signature) {
     // Para permitir testes e depuração, não vamos rejeitar requisições sem assinatura
     // Em produção, você pode exigir assinatura após configurar corretamente
 }
+
+// Adicionando log para verificar o conteúdo do evento recebido
+error_log("WEBHOOK - Conteúdo do evento recebido: " . print_r($event, true));
 
 error_log("WEBHOOK - Raw input recebido: " . $input);
 
@@ -479,25 +482,25 @@ if ($is_payment_event) {
 // Função para processar as reservas associadas a um pagamento
 function processarReservas($external_reference, $reservation_status, $conn) {
     error_log("WEBHOOK - Iniciando processamento de reservas - external_reference: {$external_reference}, status: {$reservation_status}");
-    
+
     // O external_reference pode conter múltiplos IDs de reserva separados por vírgula
     $reservation_ids = explode(',', $external_reference);
-    
+
     // Verificar se os IDs precisam ser limpos de espaços ou caracteres especiais
     $reservation_ids = array_map('trim', $reservation_ids);
-    
+
     error_log("WEBHOOK - IDs de reserva extraídos: " . print_r($reservation_ids, true));
     error_log("WEBHOOK - Quantidade de IDs de reservas a serem atualizados: " . count($reservation_ids) . ", IDs: " . implode(',', $reservation_ids));
-    
+
     // Atualizar todas as reservas associadas a este pagamento
     foreach ($reservation_ids as $reservation_id) {
         $reservation_id = trim($reservation_id); // Remover espaços em branco
-        
+
         // Validar que o ID da reserva é válido antes de fazer a atualização
         // O formato do ID gerado por uniqid('res_', true) é como 'res_68fbe6b2e9b5f2.69131627'
         if (!empty($reservation_id) && preg_match('/^res_[a-f0-9]+[.][0-9]+$/', $reservation_id)) {
             error_log("WEBHOOK - Atualizando reserva: {$reservation_id} para status: {$reservation_status}");
-            
+
             if ($reservation_status === 'confirmado') {
                 // Atualizar status e definir o tempo de confirmação
                 $stmt = $conn->prepare("UPDATE reservas SET status = ?, payment_confirmed_at = NOW() WHERE id = ?");
@@ -509,32 +512,35 @@ function processarReservas($external_reference, $reservation_status, $conn) {
                 $stmt->bind_param("ss", $reservation_status, $reservation_id);
                 error_log("WEBHOOK - Atualizando status (sem payment_confirmed_at) para a reserva: {$reservation_id}");
             }
-            
+
             if ($stmt->execute()) {
                 error_log("WEBHOOK - Reserva {$reservation_id} atualizada com sucesso para status: {$reservation_status}");
-                
+
                 // Log adicional para verificar resposta do banco
                 error_log("WEBHOOK - Linhas afetadas pela atualização: " . $stmt->affected_rows);
-                
+
                 // Se o pagamento foi aprovado, atualizar também a agenda
                 if ($reservation_status === 'confirmado') {
                     // Obter a data da reserva
-                    $reserva_data = $conn->prepare("SELECT data FROM reservas WHERE id = ?");
+                    $reserva_data = $conn->prepare("SELECT data, user_id FROM reservas WHERE id = ?");
                     $reserva_data->bind_param("s", $reservation_id);
                     $reserva_data->execute();
                     $result = $reserva_data->get_result();
-                    
+
                     error_log("WEBHOOK - Consulta à tabela reservas executada para reserva {$reservation_id}");
                     error_log("WEBHOOK - Linhas retornadas pela consulta: " . $result->num_rows);
-                    
+
                     if ($row = $result->fetch_assoc()) {
-                        error_log("WEBHOOK - Data da reserva {$reservation_id} encontrada: {$row['data']}");
-                        
+                        error_log("WEBHOOK - Data da reserva {$reservation_id} encontrada: {$row['data']}, user_id: {$row['user_id']}");
+
                         // Atualizar status da agenda para 'reservado' quando o pagamento é confirmado via webhook
                         $update_agenda = $conn->prepare("UPDATE agenda SET status = 'reservado' WHERE data = ?");
                         $update_agenda->bind_param("s", $row['data']);
                         $update_agenda->execute();
                         error_log("WEBHOOK - Atualização da agenda para data {$row['data']}, status 'reservado' (reserva: {$reservation_id}), linhas afetadas: " . $update_agenda->affected_rows);
+
+                        // Registrar o evento de confirmação para debug
+                        error_log("WEBHOOK - Pagamento confirmado registrado para reserva {$reservation_id}, data {$row['data']}, usuário {$row['user_id']}");
                     } else {
                         error_log("WEBHOOK - Erro: Não foi possível encontrar a data da reserva {$reservation_id}");
                     }
@@ -542,7 +548,7 @@ function processarReservas($external_reference, $reservation_status, $conn) {
             } else {
                 error_log("WEBHOOK - Erro ao atualizar reserva {$reservation_id}: " . $stmt->error);
             }
-            
+
             $stmt->close();
         } else {
             error_log("WEBHOOK - ID de reserva inválido ignorado: {$reservation_id}");
@@ -551,6 +557,9 @@ function processarReservas($external_reference, $reservation_status, $conn) {
             error_log("WEBHOOK - Validação do ID: " . (preg_match('/^res_[a-f0-9]+[.][0-9]+$/', $reservation_id) ? 'PASSOU' : 'FALHOU'));
         }
     }
+
+    // Adicionando log para confirmar que o processamento foi concluído
+    error_log("WEBHOOK - Processamento de reservas concluído para external_reference: {$external_reference}, status final: {$reservation_status}");
 }
 
 // Responder com 200 OK para confirmar recebimento

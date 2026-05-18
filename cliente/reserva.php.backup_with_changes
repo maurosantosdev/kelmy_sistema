@@ -1,0 +1,2452 @@
+<?php
+// Sessão é iniciada but authentication is not required to view the reservation calendar
+if (session_status() == PHP_SESSION_NONE) {
+    session_start();
+}
+
+// Verificar se o usuário está logado e se o usuário ainda existe no banco de dados
+if (isset($_SESSION['user_id'])) {
+    // Conectar ao banco de dados para verificar se o usuário ainda existe
+    require_once '../php/db_connect.php';
+
+    $user_id = $_SESSION['user_id'];
+    $stmt = $conn->prepare("SELECT id FROM usuarios WHERE id = ?");
+    $stmt->bind_param("i", $user_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    if ($result->num_rows == 0) {
+        // Usuário não existe mais no banco, limpar a sessão
+        $_SESSION = array();
+
+        // Se a sessão usa um cookie para persistência, exclua-o também
+        if (ini_get("session.use_cookies")) {
+            $params = session_get_cookie_params();
+            setcookie(session_name(), '', time() - 42000,
+                $params["path"], $params["domain"],
+                $params["secure"], $params["httponly"]
+            );
+        }
+
+        session_destroy();
+
+        // Redirecionar para login
+        header("Location: login.php");
+        exit();
+    }
+}
+?> 
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Reserve sua Data - Chácara Recanto do Sossego</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+    <style>
+        .selected-date-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 5px 0;
+        }
+        .date-info {
+            text-align: left;
+        }
+        .remove-date-btn {
+            margin-left: 10px;
+            background: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 2px 6px;
+            cursor: pointer;
+            font-size: 0.8em;
+        }
+        /* Estilos para o calendário - ajustar datas e valores */
+        #reservaCalendar .calendar-day {
+            padding: 1px !important;
+            font-size: 0.55em !important;
+        }
+        #reservaCalendar .day-number {
+            font-size: 8px !important;
+            order: 1;
+        }
+        #reservaCalendar .price {
+            font-size: 8px !important;
+            color: var(--price-color) !important;
+            margin-top: 1px !important;
+            font-weight: bold !important;
+            order: 2 !important;
+            white-space: nowrap !important;
+        }
+
+        /* Estilos para o card de Detalhes da Seleção - alinhamento à esquerda e tamanho de texto padronizado */
+        #reserva-details {
+            text-align: left !important;
+            font-size: 10px !important;
+        }
+        #reserva-details h2 {
+            text-align: left !important;
+            margin-left: 0 !important;
+            font-size: 10px !important;
+        }
+
+        /* Change header title color to match button color */
+        .ui-header h1 {
+            color: #34495e !important;
+        }
+        #reserva-details p {
+            text-align: left !important;
+            margin-left: 0 !important;
+            font-size: 10px !important;
+        }
+        #reserva-details label {
+            display: block !important;
+            text-align: left !important;
+            margin-left: 0 !important;
+            font-size: 10px !important;
+        }
+        #selected-dates-container {
+            text-align: left !important;
+            margin-left: 0 !important;
+            font-size: 10px !important;
+        }
+        #selected-dates-list {
+            text-align: left !important;
+            margin-left: 0 !important;
+            padding-left: 15px !important;
+            font-size: 10px !important;
+        }
+        #selected-dates-list li {
+            font-size: 10px !important;
+        }
+        #selected-total-price-text {
+            font-size: 10px !important;
+        }
+        /* Espaçamento entre o botão radio e o texto (20px como solicitado) */
+        #payment_50, #payment_100 {
+            margin-right: 20px !important;
+        }
+    </style>
+</head>
+<body>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<div id="reservaPageCliente" class="container-fluid d-flex flex-column" style="min-height: 100vh;">
+    <header class="bg-white text-dark py-3">
+        <div class="container">
+            <div class="d-flex justify-content-between align-items-center">
+                <?php if (isset($_SESSION['user_name'])): ?>
+                <h1 class="h5 mb-0">Olá <?php echo htmlspecialchars($_SESSION['user_name']); ?></h1>
+                <a href="suas_reservas.php" class="btn btn-light btn-sm">Minhas Reservas</a>
+                <?php else: ?>
+                <h1 class="h5 mb-0">Reserve sua Data</h1>
+                <a href="#" onclick="showLoginModal(); return false;" id="login-link-reserva" class="btn btn-light btn-sm">Entrar</a>
+                <?php endif; ?>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow-1 py-4">
+        <div class="container">
+            <div class="row justify-content-center">
+                <div class="col-lg-10">
+                    <div class="card mb-4">
+                        <div class="card-body">
+                            <div id="reservaCalendarControls" class="d-flex justify-content-between align-items-center mb-3">
+                                <button id="reservaPrevMonth" class="btn btn-outline-secondary">
+                                    <i class="fas fa-chevron-left"></i> Anterior
+                                </button>
+                                <h2 id="reservaCurrentMonthYear" class="mb-0"></h2>
+                                <button id="reservaNextMonth" class="btn btn-outline-secondary">
+                                    Próximo <i class="fas fa-chevron-right"></i>
+                                </button>
+                            </div>
+
+                            <div id="reservaCalendar" class="mb-3"></div>
+
+                            <div class="calendar-legend d-flex justify-content-center gap-3">
+                                <div><span class="dot available"></span> Disponível</div>
+                                <div><span class="dot reserved"></span> Reservado</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card mb-4" id="reserva-details" style="display:none;">
+                        <div class="card-body">
+                            <h2 class="card-title">Detalhes da Seleção</h2>
+                            <div id="selected-dates-container">
+                                <p>Datas selecionadas:</p>
+                                <ul id="selected-dates-list"></ul>
+                            </div>
+                            <p>Check-in: <strong>09:00</strong> | Check-out: <strong>08:00</strong></p>
+                            <p>Valor total das diárias: <strong id="selected-total-price-text"></strong></p>
+                            <p>Forma de pagamento:</p>
+                            <div class="mb-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="payment_type" value="50" id="payment_50" checked>
+                                    <label class="form-check-label" for="payment_50">50% (Entrada)</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="payment_type" value="100" id="payment_100">
+                                    <label class="form-check-label" for="payment_100">100% (Total)</label>
+                                </div>
+                            </div>
+
+                            <form id="reservaForm">
+                                <input type="hidden" name="selected_dates" id="selected_dates_input">
+                                <input type="hidden" name="total_price" id="total_price_input">
+                                <input type="hidden" name="payment_percentage" id="payment_percentage_input" value="50">
+                                <div class="mb-3">
+                                    <label for="observacoes" class="form-label">Observações (opcional):</label>
+                                    <textarea name="observacoes" id="observacoes" class="form-control"></textarea>
+                                </div>
+                                <button type="button" id="confirmReservaBtn" class="btn btn-primary">Confirmar Reserva</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="fixed-bottom bg-dark text-white py-2">
+        <div class="container-fluid px-0">
+            <nav class="row g-0 text-center">
+                <div class="col-3 py-2">
+                    <a href="../index.php" class="text-white text-decoration-none d-block h-100 d-flex flex-column align-items-center justify-content-center">
+                        <i class="fas fa-home mb-1"></i>
+                        <small>Inicio</small>
+                    </a>
+                </div>
+                <div class="col-3 py-2">
+                    <a href="reserva.php" class="text-white text-decoration-none d-block h-100 d-flex flex-column align-items-center justify-content-center active">
+                        <i class="fas fa-calendar-alt mb-1"></i>
+                        <small>Reserve</small>
+                    </a>
+                </div>
+                <div class="col-3 py-2">
+                    <a href="suas_reservas.php" class="text-white text-decoration-none d-block h-100 d-flex flex-column align-items-center justify-content-center">
+                        <i class="fas fa-calendar mb-1"></i>
+                        <small>Reservas</small>
+                    </a>
+                </div>
+                <div class="col-3 py-2">
+                    <a href="perfil.php" class="text-white text-decoration-none d-block h-100 d-flex flex-column align-items-center justify-content-center">
+                        <i class="fas fa-user mb-1"></i>
+                        <small>Perfil</small>
+                    </a>
+                </div>
+            </nav>
+        </div>
+    </footer>
+</div>
+
+<script>
+// Definindo a função global diretamente no HTML para garantir que esteja disponível
+function handleReservaClick() {
+    // Fazer uma verificação em tempo real para garantir que o status de login esteja atualizado
+    fetch('../php/cliente_login.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: 'check_session=1'
+    })
+    .then(response => response.json())
+    .then(response => {
+        if (response.success && response.message && response.message.includes('Usuário já está logado')) {
+            // O usuário está logado, proceder diretamente para a confirmação da reserva
+            confirmReserva();
+        } else {
+            // O usuário não está logado, mostrar o modal de login
+            showLoginModal();
+        }
+    })
+    .catch(error => {
+        console.error('Erro ao verificar sessão:', error);
+        // Em caso de erro, exibir o modal de login como fallback
+        showLoginModal();
+    });
+}
+
+// Função para mostrar o modal de login
+function showLoginModal() {
+    // Verificar se o usuário já está logado antes de mostrar o modal
+    fetch('../php/cliente_login.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: 'check_session=1'
+    })
+    .then(response => response.json())
+    .then(response => {
+        if (response.success && response.message && response.message.includes('Usuário já está logado')) {
+            // Usuário já está logado, mostrar mensagem e continuar na mesma página
+            Swal.fire({
+                title: 'Informação',
+                text: response.message,
+                icon: 'info',
+                confirmButtonText: 'Continuar',
+                confirmButtonColor: '#3498db'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Atualizar a página para refletir o estado de autenticação e continuar na página de reserva
+                    window.location.href = 'reserva.php';
+                }
+            });
+        } else {
+            // Mostrar o modal de login normalmente
+            const loginModal = document.getElementById('login-modal-overlay');
+            if (loginModal) {
+                loginModal.style.display = 'flex';
+
+                // Reset form containers
+                document.getElementById('login-form-container').style.display = 'block';
+                document.getElementById('register-form-container').style.display = 'none';
+
+                // Limpar formulários
+                document.getElementById('loginModalForm').reset();
+                document.getElementById('registerModalForm').reset();
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Erro na verificação de sessão:', error);
+        // Em caso de erro na verificação, mostrar o modal normalmente
+        const loginModal = document.getElementById('login-modal-overlay');
+        if (loginModal) {
+            loginModal.style.display = 'flex';
+
+            // Reset form containers
+            document.getElementById('login-form-container').style.display = 'block';
+            document.getElementById('register-form-container').style.display = 'none';
+
+            // Limpar formulários
+            document.getElementById('loginModalForm').reset();
+            document.getElementById('registerModalForm').reset();
+        }
+    });
+}
+
+// Função para confirmar a reserva
+function confirmReserva() {
+    // Pegando os valores necessários
+    const selectedDates = document.getElementById('selected_dates_input').value;
+    const totalPrice = document.getElementById('total_price_input').value;
+    const paymentPercentage = document.getElementById('payment_percentage_input').value;
+    const observacoes = document.getElementById('observacoes').value || '';
+
+    // Verificar se os dados estão sendo obtidos corretamente
+    if (!selectedDates || !totalPrice) {
+        Swal.fire({
+            title: 'Atenção!',
+            text: "Por favor, selecione pelo menos uma data disponível antes de confirmar a reserva.",
+            icon: 'warning',
+            confirmButtonText: 'OK',
+            confirmButtonColor: '#34495e'
+        });
+        return;
+    }
+
+    // Calcular o valor a pagar com base na porcentagem
+    const totalValue = parseFloat(totalPrice);
+    const paymentValue = (totalValue * parseInt(paymentPercentage)) / 100;
+
+    // Atualizar elementos de exibição
+    const pixDataElement = document.getElementById('pix-data');
+    if (pixDataElement) pixDataElement.textContent = "Datas selecionadas";
+    const pixValorElement = document.getElementById('pix-valor');
+    if (pixValorElement) pixValorElement.textContent = paymentValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+    // Atualizar o botão de confirmação para mostrar que está processando
+    const confirmBtn = document.getElementById('confirm-payment-btn');
+    if (confirmBtn) {
+        confirmBtn.textContent = 'Gerando cobrança...';
+        confirmBtn.disabled = true;
+    }
+
+    // Criar cobrança no Mercado Pago usando fetch
+    fetch('../php/create_mp_reservation.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: 'dates=' + encodeURIComponent(selectedDates) +
+              '&observacoes=' + encodeURIComponent(observacoes) +
+              '&total_valor=' + encodeURIComponent(totalValue) +
+              '&payment_percentage=' + encodeURIComponent(paymentPercentage)
+    })
+    .then(async response => {
+        // Verificar se a resposta é ok antes de tentar converter para JSON
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`Erro na requisição: ${response.status} ${response.statusText} - ${errorText}`);
+        }
+        // Verificar se a resposta é JSON antes de fazer o parse
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            const responseText = await response.text();
+            throw new Error(`Resposta não é JSON: ${responseText}`);
+        }
+        return response.json();
+    })
+    .then(response => {
+        if(response.success) {
+            // Exibir o modal de pagamento PIX
+            const modal = document.getElementById('pix-modal-overlay');
+            if (modal) modal.style.display = 'flex';
+
+            // Atualizar o modal com o QR Code do Mercado Pago (usando código JavaScript vanilla)
+            if (response.qr_code_base64) {
+                const container = document.getElementById('payment-status-container');
+                if (container) {
+                    // Get selected dates from the form to display in the modal
+                    const selectedDatesInput = document.getElementById('selected_dates_input');
+                    let selectedDates = selectedDatesInput ? selectedDatesInput.value : 'Carregando...';
+
+                    // Parse the JSON array of dates and format them as dd/mm/yyyy
+                    let formattedDates = 'Carregando...';
+                    if (selectedDates && selectedDates !== 'Carregando...') {
+                        try {
+                            const dateArray = JSON.parse(selectedDates);
+                            if (Array.isArray(dateArray)) {
+                                formattedDates = dateArray.map(dateStr => {
+                                    // Parse the date string (format: YYYY-MM-DD) and convert to dd/mm/yyyy
+                                    const date = new Date(dateStr);
+                                    const day = String(date.getDate()).padStart(2, '0');
+                                    const month = String(date.getMonth() + 1).padStart(2, '0');
+                                    const year = date.getFullYear();
+                                    return `${day}/${month}/${year}`;
+                                }).join(', ');
+                            } else {
+                                // If it's not an array, try to format as single date
+                                const date = new Date(selectedDates);
+                                const day = String(date.getDate()).padStart(2, '0');
+                                const month = String(date.getMonth() + 1).padStart(2, '0');
+                                const year = date.getFullYear();
+                                formattedDates = `${day}/${month}/${year}`;
+                            }
+                        } catch (e) {
+                            // If parsing fails, use original value
+                            formattedDates = selectedDates.replace(/[\[\]"]/g, '').replace(/,/g, ', ');
+                        }
+                    }
+
+                    container.innerHTML = `
+                        <p style="color: #ecf0f1; margin: 6px 0; font-size: 10px;"><span style="color: #bdc3c7;">Datas:</span> <span style="color: #ffffff;">` + formattedDates + `</span></p>
+                        <p style="color: #ecf0f1; margin: 6px 0; font-size: 10px;"><span style="color: #bdc3c7;">Check-in:</span> <span style="color: #ffffff;">09:00</span> | <span style="color: #bdc3c7;">Check-out:</span> <span style="color: #ffffff;">08:00</span></p>
+                        <div id="pix-qrcode-container" style="display:flex; justify-content:center; align-items:center; margin: 15px 0; min-height: 200px;">
+                            <img id="pix-qr-image" src="data:image/png;base64,` + response.qr_code_base64 + `" alt="QR Code PIX" style="width: 180px; height: 180px; padding: 10px; background-color: white; border-radius: 8px; display: block;">
+                        </div>
+                        <div style="margin-top: 15px; border-top: 1px solid #7f8c8d; padding-top: 15px;">
+                            <p style="font-size: 10px; margin-bottom: 8px; color: #bdc3c7;">Ou copie a chave PIX:</p>
+                            <div class="pix-copy-paste">
+                                <input type="text" id="pix-key-input" value="` + (response.pix_key || response.qr_code) + `" readonly style="color: #2c3e50; background-color: #ffffff; padding: 5px; border-radius: 4px; width: 75%; font-size: 10px; overflow: auto; white-space: pre-wrap; text-overflow: clip; user-select: text; -webkit-user-select: text; -moz-user-select: text; -ms-user-select: text;" ontouchstart="this.scrollLeft=0" ontouchmove="this.scrollLeft=0" onscroll="this.scrollLeft=0" onclick="this.select();" onfocus="this.select();">
+                                <button id="copy-pix-key-btn" style="margin-left: 5px; padding: 5px 8px; background-color: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 10px;"><i class="fas fa-copy"></i></button>
+                            </div>
+                        </div>
+                        <button id="confirm-payment-btn" class="ui-btn" style="background-color: #27ae60; color: white; margin-top: 10px; font-size: 10px; padding: 8px;">Já paguei, verificar!</button>
+                        <div id="payment-status-indicator" style="text-align: center; margin-top: 10px; display: none;">
+                            <p style="color: #ecf0f1; font-size: 10px;">Verificando status do pagamento...</p>
+                        </div>
+                    `;
+                }
+            } else if (response.payment_url) {
+                const container = document.getElementById('payment-status-container');
+                if (container) {
+                    // Get selected dates from the form to display in the modal
+                    const selectedDatesInput = document.getElementById('selected_dates_input');
+                    let selectedDates = selectedDatesInput ? selectedDatesInput.value : 'Carregando...';
+
+                    // Parse the JSON array of dates and format them as dd/mm/yyyy
+                    let formattedDates = 'Carregando...';
+                    if (selectedDates && selectedDates !== 'Carregando...') {
+                        try {
+                            const dateArray = JSON.parse(selectedDates);
+                            if (Array.isArray(dateArray)) {
+                                formattedDates = dateArray.map(dateStr => {
+                                    // Parse the date string (format: YYYY-MM-DD) and convert to dd/mm/yyyy
+                                    const date = new Date(dateStr);
+                                    const day = String(date.getDate()).padStart(2, '0');
+                                    const month = String(date.getMonth() + 1).padStart(2, '0');
+                                    const year = date.getFullYear();
+                                    return `${day}/${month}/${year}`;
+                                }).join(', ');
+                            } else {
+                                // If it's not an array, try to format as single date
+                                const date = new Date(selectedDates);
+                                const day = String(date.getDate()).padStart(2, '0');
+                                const month = String(date.getMonth() + 1).padStart(2, '0');
+                                const year = date.getFullYear();
+                                formattedDates = `${day}/${month}/${year}`;
+                            }
+                        } catch (e) {
+                            // If parsing fails, use original value
+                            formattedDates = selectedDates.replace(/[\[\]"]/g, '').replace(/,/g, ', ');
+                        }
+                    }
+
+                    container.innerHTML = `
+                        <p style="color: #ecf0f1; margin: 6px 0; font-size: 10px;"><span style="color: #bdc3c7;">Datas:</span> <span style="color: #ffffff;">` + formattedDates + `</span></p>
+                        <p style="color: #ecf0f1; margin: 6px 0; font-size: 10px;"><span style="color: #bdc3c7;">Check-in:</span> <span style="color: #ffffff;">09:00</span> | <span style="color: #bdc3c7;">Check-out:</span> <span style="color: #ffffff;">08:00</span></p>
+                        <div style="margin-top: 15px; border-top: 1px solid #7f8c8d; padding-top: 15px;">
+                            <p style="font-size: 10px; margin-bottom: 8px; color: #bdc3c7;">Ou copie a chave PIX:</p>
+                            <div class="pix-copy-paste">
+                                <input type="text" id="pix-key-input" value="` + (response.pix_key || response.qr_code) + `" readonly style="color: #2c3e50; background-color: #ffffff; padding: 5px; border-radius: 4px; width: 75%; font-size: 10px; overflow: auto; white-space: pre-wrap; text-overflow: clip; user-select: text; -webkit-user-select: text; -moz-user-select: text; -ms-user-select: text;" ontouchstart="this.scrollLeft=0" ontouchmove="this.scrollLeft=0" onscroll="this.scrollLeft=0" onclick="this.select();" onfocus="this.select();">
+                                <button id="copy-pix-key-btn" style="margin-left: 5px; padding: 5px 8px; background-color: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 10px;"><i class="fas fa-copy"></i></button>
+                            </div>
+                        </div>
+                        <button id="confirm-payment-btn" class="ui-btn" style="background-color: #27ae60; color: white; margin-top: 10px; font-size: 10px; padding: 8px;">Já paguei, verificar!</button>
+                        <div id="payment-status-indicator" style="text-align: center; margin-top: 10px; display: none;">
+                            <p style="color: #ecf0f1; font-size: 10px;">Verificando status do pagamento...</p>
+                        </div>
+                    `;
+                }
+            } else {
+                const container = document.getElementById('payment-status-container');
+                // Get selected dates from the form to display in the modal
+                const selectedDatesInput = document.getElementById('selected_dates_input');
+                let selectedDates = selectedDatesInput ? selectedDatesInput.value : 'Carregando...';
+
+                // Parse the JSON array of dates and format them as dd/mm/yyyy
+                let formattedDates = 'Carregando...';
+                if (selectedDates && selectedDates !== 'Carregando...') {
+                    try {
+                        const dateArray = JSON.parse(selectedDates);
+                        if (Array.isArray(dateArray)) {
+                            formattedDates = dateArray.map(dateStr => {
+                                // Parse the date string (format: YYYY-MM-DD) and convert to dd/mm/yyyy
+                                const date = new Date(dateStr);
+                                const day = String(date.getDate()).padStart(2, '0');
+                                const month = String(date.getMonth() + 1).padStart(2, '0');
+                                const year = date.getFullYear();
+                                return `${day}/${month}/${year}`;
+                            }).join(', ');
+                        } else {
+                            // If it's not an array, try to format as single date
+                            const date = new Date(selectedDates);
+                            const day = String(date.getDate()).padStart(2, '0');
+                            const month = String(date.getMonth() + 1).padStart(2, '0');
+                            const year = date.getFullYear();
+                            formattedDates = `${day}/${month}/${year}`;
+                        }
+                    } catch (e) {
+                        // If parsing fails, use original value
+                        formattedDates = selectedDates.replace(/[\[\]"]/g, '').replace(/,/g, ', ');
+                    }
+                }
+
+                if (container) {
+                    container.innerHTML = `
+                        <p style="color: #ecf0f1; margin: 6px 0; font-size: 10px;"><span style="color: #bdc3c7;">Datas:</span> <span style="color: #ffffff;">` + formattedDates + `</span></p>
+                        <p style="color: #ecf0f1; margin: 6px 0; font-size: 10px;"><span style="color: #bdc3c7;">Check-in:</span> <span style="color: #ffffff;">09:00</span> | <span style="color: #bdc3c7;">Check-out:</span> <span style="color: #ffffff;">08:00</span></p>
+                        <p style="margin-bottom: 12px; color: #ecf0f1; font-size: 10px;">Erro: Não foi possível gerar o código PIX. Tente novamente mais tarde ou entre em contato com o suporte.</p>
+                        <div style="margin-top: 15px; border-top: 1px solid #7f8c8d; padding-top: 15px;">
+                            <p style="font-size: 10px; margin-bottom: 8px; color: #bdc3c7;">Ou copie a chave PIX:</p>
+                            <div class="pix-copy-paste">
+                                <input type="text" id="pix-key-input" value="` + (response.pix_key || response.qr_code) + `" readonly style="color: #2c3e50; background-color: #ffffff; padding: 5px; border-radius: 4px; width: 75%; font-size: 10px; overflow: auto; white-space: pre-wrap; text-overflow: clip; user-select: text; -webkit-user-select: text; -moz-user-select: text; -ms-user-select: text;" ontouchstart="this.scrollLeft=0" ontouchmove="this.scrollLeft=0" onscroll="this.scrollLeft=0" onclick="this.select();" onfocus="this.select();">
+                                <button id="copy-pix-key-btn" style="margin-left: 5px; padding: 5px 8px; background-color: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 10px;"><i class="fas fa-copy"></i></button>
+                            </div>
+                        </div>
+                        <button id="close-pix-modal" class="ui-btn" style="background-color: #e74c3c; color: white; margin-top: 10px; font-size: 10px; padding: 8px;">Fechar</button>
+                    `;
+                }
+            }
+            // Iniciar verificação automática do status do pagamento após exibir o QR Code
+            // Aguardar 3 segundos antes de começar a verificar automaticamente
+            setTimeout(() => {
+                // Verificar se o modal ainda está aberto antes de iniciar a verificação
+                if ($('#pix-modal-overlay').is(':visible')) {
+                    const selectedDates = document.getElementById('selected_dates_input').value;
+
+                    // Mostrar mensagem que a verificação automática começou
+                    const paymentStatusIndicator = document.getElementById('payment-status-indicator');
+                    if (paymentStatusIndicator) {
+                        paymentStatusIndicator.innerHTML = '<p style="color: #ecf0f1; font-size: 10px;">Verificação automática iniciada...</p>';
+                        paymentStatusIndicator.style.display = 'block';
+                    }
+
+                    // Atualizar o texto do botão para indicar que não é necessário clicar
+                    const confirmPaymentBtn = document.getElementById('confirm-payment-btn');
+                    if (confirmPaymentBtn) {
+                        confirmPaymentBtn.textContent = 'Aguardando confirmação...';
+                        confirmPaymentBtn.disabled = true;
+                    }
+
+                    // Resetar contador de tentativas antes de iniciar nova verificação
+                    window.verificationAttempts = 0;
+
+                    // Definir um tempo máximo global (1 minuto) para garantir redirecionamento
+                    setTimeout(() => {
+                        const modalElement = document.getElementById('pix-modal-overlay');
+                        if (modalElement && modalElement.style.display !== 'none' && modalElement.offsetParent !== null) {
+                            console.log('Tempo máximo global atingido, forçando redirecionamento...');
+                            const paymentStatusIndicator = document.getElementById('payment-status-indicator');
+                            if (paymentStatusIndicator) {
+                                paymentStatusIndicator.innerHTML = '<p style="color: #ecf0f1; font-size: 10px;">Tempo limite atingido. Redirecionando...</p>';
+                            }
+
+                            // Fechar o modal antes de redirecionar
+                            // Como fallback adicional, também tentar fechar com CSS
+                            if (modalElement) {
+                                modalElement.style.display = 'none';
+                            }
+
+                            // Redirecionar para suas_reservas.php após atingir o tempo limite
+                            window.location.replace('suas_reservas.php');
+                        }
+                    }, 60000); // 1 minuto = 60000 ms (reduzido para melhor experiência do usuário)
+
+                    // Iniciar a verificação de status do pagamento
+                    if (selectedDates) {
+                        checkPaymentStatus(selectedDates);
+                    } else {
+                        console.error('Nenhuma data selecionada para verificar pagamento');
+                        // Fechar o modal e redirecionar em caso de erro
+                        const modalElement = document.getElementById('pix-modal-overlay');
+                        if (modalElement) {
+                            modalElement.style.display = 'none';
+                        }
+                        window.location.replace('suas_reservas.php');
+                    }
+                }
+            }, 3000); // 3 segundos para iniciar a verificação automática
+        } else {
+            Swal.fire({
+                title: 'Erro!',
+                text: "Erro ao criar cobrança: " + response.message,
+                icon: 'error',
+                confirmButtonText: 'OK',
+                confirmButtonColor: '#e74c3c'
+            });
+            const confirmBtn = document.getElementById('confirm-payment-btn');
+            if (confirmBtn) {
+                confirmBtn.textContent = 'Já Paguei, Agendar!';
+                confirmBtn.disabled = false;
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Erro na criação da cobrança:', error);
+        // Verificar se é um erro de parsing JSON e exibir mensagem mais específica
+        if (error instanceof SyntaxError) {
+            console.error("Erro de comunicação com o servidor: formato de resposta inválido.", error);
+            // Em caso de erro de comunicação, simplesmente logamos no console e não exibimos alerta
+            // para evitar confusão do usuário caso a requisição tenha sido bem-sucedida apesar do erro
+        } else {
+            console.error("Erro na comunicação com o servidor: ", error.message);
+            // Em caso de erro de comunicação, simplesmente logamos no console e não exibimos alerta
+            // para evitar confusão do usuário caso a requisição tenha sido bem-sucedida apesar do erro
+        }
+        const confirmBtn = document.getElementById('confirm-payment-btn');
+        if (confirmBtn) {
+            confirmBtn.textContent = 'Já Paguei, Agendar!';
+            confirmBtn.disabled = false;
+        }
+    });
+}
+
+// Função para fazer login no modal
+function loginModal() {
+    const email = document.getElementById('email_login_modal').value;
+    const senha = document.getElementById('senha_login_modal').value;
+
+    if (!email || !senha) {
+        Swal.fire({
+            title: 'Atenção!',
+            text: 'Por favor, preencha todos os campos.',
+            icon: 'warning',
+            confirmButtonText: 'OK',
+            confirmButtonColor: '#34495e'
+        });
+        return;
+    }
+
+    // Usando fetch para melhor tratamento de erros
+    fetch('../php/cliente_login.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: 'email=' + encodeURIComponent(email) + '&senha=' + encodeURIComponent(senha)
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(response => {
+        if (response.success) {
+            Swal.fire({
+                title: 'Login realizado com sucesso!',
+                text: response.message,
+                icon: 'success',
+                confirmButtonText: 'Continuar',
+                confirmButtonColor: '#27ae60'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Salvar as datas selecionadas no localStorage antes de fechar o modal
+                    const selectedDatesInput = document.getElementById('selected_dates_input');
+                    const totalPriceInput = document.getElementById('total_price_input');
+                    const paymentPercentageInput = document.getElementById('payment_percentage_input');
+                    const observacoesInput = document.getElementById('observacoes');
+
+                    if (selectedDatesInput && selectedDatesInput.value) {
+                        localStorage.setItem('selectedDates', selectedDatesInput.value);
+                        localStorage.setItem('totalPrice', totalPriceInput ? totalPriceInput.value : '');
+                        localStorage.setItem('paymentPercentage', paymentPercentageInput ? paymentPercentageInput.value : '50');
+                        localStorage.setItem('observacoes', observacoesInput ? observacoesInput.value : '');
+                    }
+
+                    // Fechar o modal de login
+                    const loginModal = document.getElementById('login-modal-overlay');
+                    if (loginModal) {
+                        loginModal.style.display = 'none';
+                    }
+                    // Atualizar a página para refletir o estado de autenticação e permanecer na página de reserva
+                    window.location.href = 'reserva.php';
+                }
+            });
+        } else {
+            // Verificar se a mensagem de erro é "Usuário já está logado"
+            if (response.message && response.message.includes('Usuário já está logado')) {
+                Swal.fire({
+                    title: 'Informação',
+                    text: response.message,
+                    icon: 'info',
+                    confirmButtonText: 'Continuar',
+                    confirmButtonColor: '#3498db'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        // Fechar o modal de login
+                        const loginModal = document.getElementById('login-modal-overlay');
+                        if (loginModal) {
+                            loginModal.style.display = 'none';
+                        }
+                        // Atualizar a página para refletir o estado de autenticação e permanecer na página de reserva
+                        window.location.href = 'reserva.php';
+                    }
+                });
+            } else {
+                Swal.fire({
+                    title: 'Erro!',
+                    text: response.message,
+                    icon: 'error',
+                    confirmButtonText: 'OK',
+                    confirmButtonColor: '#e74c3c'
+                });
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Erro na comunicação com o servidor:', error);
+        // Tratamento de erro genérico
+        Swal.fire({
+            title: 'Erro de comunicação',
+            text: 'Ocorreu um erro na comunicação com o servidor. Por favor, atualize a página e tente novamente.',
+            icon: 'error',
+            confirmButtonText: 'OK',
+            confirmButtonColor: '#dc3545'
+        });
+    });
+}
+
+
+// Função para registrar no modal
+function registerModal() {
+    const nome = document.getElementById('nome_registro_modal').value;
+    const rg = document.getElementById('rg_registro_modal').value;
+    const cpf = document.getElementById('cpf_registro_modal').value;
+    const estadoCivil = document.getElementById('estado_civil_registro_modal').value;
+    const rua = document.getElementById('rua_registro_modal').value;
+    const numero = document.getElementById('numero_registro_modal').value;
+    const bairro = document.getElementById('bairro_registro_modal').value;
+    const cep = document.getElementById('cep_registro_modal').value;
+    const cidade = document.getElementById('cidade_registro_modal').value;
+    const dataNascimento = document.getElementById('data_nascimento_registro_modal').value;
+    const email = document.getElementById('email_registro_modal').value;
+    const telefone = document.getElementById('telefone_registro_modal').value;
+    const senha = document.getElementById('senha_registro_modal').value;
+    const confirmarSenha = document.getElementById('confirmar_senha_registro_modal').value;
+
+    if (!nome || !rg || !cpf || !estadoCivil || !rua || !numero || !bairro || !cep || !cidade || !dataNascimento || !email || !telefone || !senha || !confirmarSenha) {
+        Swal.fire({
+            title: 'Atenção!',
+            text: 'Por favor, preencha todos os campos.',
+            icon: 'warning',
+            confirmButtonText: 'OK',
+            confirmButtonColor: '#34495e'
+        });
+        return;
+    }
+
+    if (senha !== confirmarSenha) {
+        Swal.fire({
+            title: 'Atenção!',
+            text: 'As senhas não coincidem.',
+            icon: 'warning',
+            confirmButtonText: 'OK',
+            confirmButtonColor: '#34495e'
+        });
+        return;
+    }
+
+    // Usando fetch para melhor tratamento de erros
+    fetch('../php/cliente_cadastro.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: 'nome=' + encodeURIComponent(nome) +
+              '&rg=' + encodeURIComponent(rg) +
+              '&cpf=' + encodeURIComponent(cpf) +
+              '&estado_civil=' + encodeURIComponent(estadoCivil) +
+              '&rua=' + encodeURIComponent(rua) +
+              '&numero=' + encodeURIComponent(numero) +
+              '&bairro=' + encodeURIComponent(bairro) +
+              '&cep=' + encodeURIComponent(cep) +
+              '&cidade=' + encodeURIComponent(cidade) +
+              '&data_nascimento=' + encodeURIComponent(dataNascimento) +
+              '&email=' + encodeURIComponent(email) +
+              '&telefone=' + encodeURIComponent(telefone) +
+              '&senha=' + encodeURIComponent(senha) +
+              '&confirmar_senha=' + encodeURIComponent(confirmarSenha)
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(response => {
+        if (response.success) {
+            Swal.fire({
+                title: 'Cadastro realizado com sucesso!',
+                text: response.message,
+                icon: 'success',
+                confirmButtonText: 'Continuar',
+                confirmButtonColor: '#27ae60'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Salvar as datas selecionadas no localStorage antes de fechar o modal
+                    const selectedDatesInput = document.getElementById('selected_dates_input');
+                    const totalPriceInput = document.getElementById('total_price_input');
+                    const paymentPercentageInput = document.getElementById('payment_percentage_input');
+                    const observacoesInput = document.getElementById('observacoes');
+
+                    if (selectedDatesInput && selectedDatesInput.value) {
+                        localStorage.setItem('selectedDates', selectedDatesInput.value);
+                        localStorage.setItem('totalPrice', totalPriceInput ? totalPriceInput.value : '');
+                        localStorage.setItem('paymentPercentage', paymentPercentageInput ? paymentPercentageInput.value : '50');
+                        localStorage.setItem('observacoes', observacoesInput ? observacoesInput.value : '');
+                    }
+
+                    // Fechar o modal de cadastro
+                    const loginModal = document.getElementById('login-modal-overlay');
+                    if (loginModal) {
+                        loginModal.style.display = 'none';
+                    }
+                    // Atualizar a página para refletir o estado de autenticação e permanecer na página de reserva
+                    window.location.href = 'reserva.php';
+                }
+            });
+        } else {
+            Swal.fire({
+                title: 'Erro!',
+                text: response.message,
+                icon: 'error',
+                confirmButtonText: 'OK',
+                confirmButtonColor: '#e74c3c'
+            });
+        }
+    })
+    .catch(error => {
+        console.error('Erro na comunicação com o servidor durante o registro:', error);
+        // Tratamento de erro genérico
+        Swal.fire({
+            title: 'Erro de comunicação',
+            text: 'Ocorreu um erro na comunicação com o servidor. Por favor, atualize a página e tente novamente.',
+            icon: 'error',
+            confirmButtonText: 'OK',
+            confirmButtonColor: '#dc3545'
+        });
+    });
+}
+
+// Função para verificar se o usuário está logado ao carregar a página
+function checkLoginStatusOnLoad() {
+    // Verificar se o usuário já está logado antes de mostrar o modal
+    fetch('../php/cliente_login.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: 'check_session=1'
+    })
+    .then(response => response.json())
+    .then(response => {
+        if (response.success && response.message && response.message.includes('Usuário já está logado')) {
+            // Atualizar o header para mostrar o nome do usuário e o botão apropriado
+            // Esta lógica já está sendo tratada no PHP, mas adicionamos esta verificação adicional para atualizar o frontend
+        }
+    })
+    .catch(error => {
+        console.error('Erro ao verificar status de login:', error);
+    });
+}
+
+// Função para restaurar as datas selecionadas do localStorage
+function restoreSelectedDates() {
+    const storedDates = localStorage.getItem('selectedDates');
+    const totalPrice = localStorage.getItem('totalPrice');
+    const paymentPercentage = localStorage.getItem('paymentPercentage') || '50';
+    const observacoes = localStorage.getItem('observacoes') || '';
+
+    if (storedDates) {
+        try {
+            const datesArray = JSON.parse(storedDates);
+            if (Array.isArray(datesArray) && datesArray.length > 0) {
+                // Processar as datas para selecioná-las no calendário
+                datesArray.forEach(dateObj => {
+                    // Check if dateObj is a string (old format) or object (new format)
+                    const date = typeof dateObj === 'string' ? dateObj : dateObj.date;
+                    const dayElement = document.querySelector(`.calendar-day[data-date="${date}"]`);
+                    if (dayElement) {
+                        dayElement.classList.add('selected');
+                    }
+                });
+
+                // Restore the dates in the global variable (handle both old and new format)
+                if (typeof datesArray[0] === 'object' && datesArray[0].date) {
+                    // New format: array of objects
+                    selectedDates = datesArray;
+                } else {
+                    // Old format: array of strings - convert to new format
+                    selectedDates = datesArray.map(date => ({
+                        date: date,
+                        price: 'R$ 0,00', // Default value, will be updated when calendar loads
+                        formatted: date // Default value, will be updated when calendar loads
+                    }));
+                }
+
+                // Restaurar os valores nos campos de formulário
+                const selectedDatesInput = document.getElementById('selected_dates_input');
+                const totalPriceInput = document.getElementById('total_price_input');
+                const paymentPercentageInput = document.getElementById('payment_percentage_input');
+                const observacoesInput = document.getElementById('observacoes');
+
+                if (selectedDatesInput) selectedDatesInput.value = JSON.stringify(selectedDates.map(d => d.date));
+                if (totalPriceInput) totalPriceInput.value = totalPrice;
+                if (paymentPercentageInput) paymentPercentageInput.value = paymentPercentage;
+                if (observacoesInput) observacoesInput.value = observacoes;
+
+                // Atualizar o display das datas selecionadas
+                updateSelectedDatesDisplay();
+
+                // Mostrar o painel de detalhes da reserva
+                const reservaDetails = document.getElementById('reserva-details');
+                if (reservaDetails) {
+                    reservaDetails.style.display = 'block';
+                }
+
+                // Restaurar a seleção do radio button de pagamento
+                const payment50Input = document.getElementById('payment_50');
+                const payment100Input = document.getElementById('payment_100');
+                if (paymentPercentage === '100') {
+                    if (payment100Input) payment100Input.checked = true;
+                } else {
+                    if (payment50Input) payment50Input.checked = true;
+                }
+
+                // Limpar o localStorage após restaurar
+                localStorage.removeItem('selectedDates');
+                localStorage.removeItem('totalPrice');
+                localStorage.removeItem('paymentPercentage');
+                localStorage.removeItem('observacoes');
+            }
+        } catch (e) {
+            console.error('Erro ao restaurar datas selecionadas:', e);
+        }
+    }
+}
+
+// Chamar a função ao carregar a página
+document.addEventListener('DOMContentLoaded', function() {
+    console.log("DOM Content Loaded disparado");
+    console.log("currentDate definida:", typeof currentDate !== 'undefined' ? currentDate : 'undefined');
+    checkLoginStatusOnLoad();
+
+    // Carregar o calendário primeiro
+    if (typeof currentDate !== 'undefined') {
+        console.log("Carregando agenda para a data atual");
+        loadAgendaData(currentDate);
+    } else {
+        console.log("currentDate não está definida, criando nova data");
+        const localCurrentDate = new Date();
+        loadAgendaData(localCurrentDate);
+    }
+
+    // Recarregar o calendário para garantir que ele apareça corretamente
+    setTimeout(function() {
+        console.log("Recarregando agenda");
+        if (typeof currentDate !== 'undefined') {
+            loadAgendaData(currentDate);
+        } else {
+            const localCurrentDate = new Date();
+            loadAgendaData(localCurrentDate);
+        }
+    }, 200); // Pequeno delay adicional para garantir carregamento completo
+
+    // Depois de garantir que o calendário está carregado, restaurar as datas selecionadas
+    setTimeout(function() {
+        console.log("Restaurando datas selecionadas");
+        restoreSelectedDates();
+    }, 500); // Pequeno delay para garantir que os elementos estejam carregados
+});
+</script>
+
+<!-- Modal de Login/Registro -->
+<div id="login-modal-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); z-index: 1000; justify-content: center; align-items: center; padding: 15px; box-sizing: border-box;">
+    <div id="login-modal-content" class="card" style="background-color: #ffffff; color: #2c3e50; padding: 20px; max-width: 90%; width: 90%; max-width: 600px; position: relative; max-height: 90vh; overflow-y: auto;">
+        <button id="close-login-modal" class="btn-close position-absolute top-0 end-0 m-2" style="z-index: 1001;" aria-label="Fechar"></button>
+        <h2 class="text-center mb-3" style="color: #2c3e50;">Autenticação Necessária</h2>
+        <p class="text-center text-muted mb-4">Para confirmar sua reserva, faça login ou cadastre-se.</p>
+        
+        <style>
+        #loginModalForm, #registerModalForm {
+            width: 100%;
+        }
+        </style>
+        
+        <div id="login-form-container">
+            <form id="loginModalForm">
+                <div class="mb-3">
+                    <label for="email_login_modal" class="form-label">E-mail:</label>
+                    <input type="email" name="email_login_modal" class="form-control" id="email_login_modal" required>
+                </div>
+
+                <div class="mb-3">
+                    <label for="senha_login_modal" class="form-label">Senha:</label>
+                    <input type="password" name="senha_login_modal" class="form-control" id="senha_login_modal" required>
+                </div>
+
+                <div class="d-grid">
+                    <button type="submit" class="btn btn-primary btn-lg" id="loginSubmitBtn" style="background-color: #2c3e50; border-color: #2c3e50;">Entrar</button>
+                </div>
+            </form>
+
+            <div style="text-align: center; margin-top: 15px;">
+                <p style="color: #7f8c8d; margin: 12px 0; font-size: 0.9em;">Ou</p>
+                <a href="#" id="switch-to-register-btn" class="btn btn-outline-primary" style="border-color: #2c3e50; color: #2c3e50;">Crie sua conta</a>
+            </div>
+        </div>
+        
+        <div id="register-form-container" style="display: none;">
+            <form id="registerModalForm">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="nome_registro_modal" class="form-label">Nome:</label>
+                        <input type="text" name="nome_registro_modal" class="form-control" id="nome_registro_modal" required>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="rg_registro_modal" class="form-label">RG:</label>
+                        <input type="text" name="rg_registro_modal" class="form-control" id="rg_registro_modal" placeholder="00.000.000-X" required>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="cpf_registro_modal" class="form-label">CPF:</label>
+                        <input type="text" name="cpf_registro_modal" class="form-control" id="cpf_registro_modal" placeholder="000.000.000-00" required>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="estado_civil_registro_modal" class="form-label">Estado Civil:</label>
+                        <select name="estado_civil_registro_modal" class="form-select" id="estado_civil_registro_modal" required>
+                            <option value="">Selecione...</option>
+                            <option value="solteiro">Solteiro(a)</option>
+                            <option value="casado">Casado(a)</option>
+                            <option value="divorciado">Divorciado(a)</option>
+                            <option value="viuvo">Viúvo(a)</option>
+                            <option value="separado">Separado(a)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-8 mb-3">
+                        <label for="rua_registro_modal" class="form-label">Rua:</label>
+                        <input type="text" name="rua_registro_modal" class="form-control" id="rua_registro_modal" required>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <label for="numero_registro_modal" class="form-label">Número:</label>
+                        <input type="text" name="numero_registro_modal" class="form-control" id="numero_registro_modal" required>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="bairro_registro_modal" class="form-label">Bairro:</label>
+                        <input type="text" name="bairro_registro_modal" class="form-control" id="bairro_registro_modal" required>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="cep_registro_modal" class="form-label">CEP:</label>
+                        <input type="text" name="cep_registro_modal" class="form-control" id="cep_registro_modal" placeholder="00000-000" required>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="cidade_registro_modal" class="form-label">Cidade:</label>
+                        <input type="text" name="cidade_registro_modal" class="form-control" id="cidade_registro_modal" required>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="telefone_registro_modal" class="form-label">Telefone:</label>
+                        <input type="tel" name="telefone_registro_modal" class="form-control" id="telefone_registro_modal" required>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="data_nascimento_registro_modal" class="form-label">Data de Nascimento:</label>
+                        <input type="date" name="data_nascimento_registro_modal" class="form-control" id="data_nascimento_registro_modal" required>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="email_registro_modal" class="form-label">E-mail:</label>
+                        <input type="email" name="email_registro_modal" class="form-control" id="email_registro_modal" required>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label for="senha_registro_modal" class="form-label">Senha:</label>
+                        <input type="password" name="senha_registro_modal" class="form-control" id="senha_registro_modal" required>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <label for="confirmar_senha_registro_modal" class="form-label">Confirmar Senha:</label>
+                        <input type="password" name="confirmar_senha_registro_modal" class="form-control" id="confirmar_senha_registro_modal" required>
+                    </div>
+                </div>
+
+                <div class="d-grid">
+                    <button type="submit" class="btn btn-primary btn-lg" style="background-color: #2c3e50; border-color: #2c3e50;">Cadastrar</button>
+                </div>
+            </form>
+
+            <div style="text-align: center; margin-top: 15px;">
+                <p style="color: #7f8c8d; margin: 12px 0; font-size: 0.9em;">Já tem conta? <a href="#" id="switch-to-login-btn" class="ui-link">Faça login</a></p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Pagamento PIX -->
+<div id="pix-modal-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); z-index: 1000; justify-content: center; align-items: center; padding: 15px; box-sizing: border-box;">
+    <div id="pix-modal-content" class="card" style="background-color: #2c3e50; color: white; padding: 20px; max-width: 350px; width: 100%; position: relative; text-align: left; border-radius: 12px; box-shadow: 0 6px 20px rgba(0,0,0,0.3);">
+        <button id="close-pix-modal" class="ui-btn ui-icon-delete ui-btn-icon-notext" style="position: absolute; top: 5px; right: 5px; background-color: transparent !important; border: none !important; box-shadow: none !important; color: #ecf0f1 !important;">Fechar</button>
+        <div class="pix-details" style="margin-bottom: 15px;">
+            <p style="margin: 6px 0; color: #ecf0f1; font-size: 12px;"><span style="color: #bdc3c7;">Realize seu pagamento:</span></p>
+            <p style="margin: 6px 0; color: #ecf0f1; font-size: 10px;"><span style="color: #bdc3c7;">Check-in:</span> <span style="color: #ffffff;">09:00</span> | <span style="color: #bdc3c7;">Check-out:</span> <span style="color: #ffffff;">08:00</span></p>
+            <p style="margin: 6px 0; color: #ecf0f1; font-size: 10px;"><span style="color: #bdc3c7;">Valor:</span> <span id="pix-valor" style="color: #ffffff;"></span></p>
+        </div>
+        <div id="payment-status-container">
+            <p class="pix-instructions">Pague com o QR Code abaixo:</p>
+            <div id="pix-qrcode"></div>
+            <div style="margin-top: 15px; border-top: 1px solid #7f8c8d; padding-top: 15px;">
+                <p style="font-size: 10px; margin-bottom: 8px; color: #bdc3c7;">Ou copie a chave PIX:</p>
+                <div class="pix-copy-paste">
+                    <input type="text" id="pix-key-input" value="Aguardando geração do código..." readonly style="overflow: auto; white-space: pre-wrap; text-overflow: clip; user-select: text; -webkit-user-select: text; -moz-user-select: text; -ms-user-select: text;" ontouchstart="this.scrollLeft=0" ontouchmove="this.scrollLeft=0" onscroll="this.scrollLeft=0" onclick="this.select();" onfocus="this.select();">
+                    <button id="copy-pix-key-btn"><i class="fas fa-copy"></i></button>
+                </div>
+            </div>
+            <button id="cancel-reservation-btn" class="ui-btn">Desistir</button>
+            <button id="confirm-payment-btn" class="ui-btn">Já Paguei, Agendar!</button>
+        </div>
+    </div>
+</div>
+
+<script src="../assets/js/jquery-1.11.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.4.4/build/qrcode.min.js"></script>
+
+<script>
+// Variável global para armazenar a data atual do calendário
+let currentDate = new Date();
+
+// Função para carregar dados da agenda (tornada global para ser acessível fora do pageinit)
+function loadAgendaData(date) {
+    const month = date.getMonth() + 1;
+    const year = date.getFullYear();
+    console.log("Carregando agenda para mês:", month, "ano:", year);
+    const timestamp = new Date().getTime(); // Adiciona timestamp para evitar cache
+    fetch(`../php/cliente_agenda.php?action=get_month&month=${month}&year=${year}&t=${timestamp}`)
+        .then(response => {
+            console.log("Resposta recebida:", response.status);
+            return response.json();
+        })
+        .then(response => {
+            console.log("Dados recebidos:", response);
+            if (response && response.success && typeof response.prices === 'object') {
+                renderReservaCalendar(date, response.prices);
+            } else {
+                console.error("Falha ao carregar dados do calendário: ", response.message);
+            }
+        })
+        .catch(error => {
+            console.error("Erro de comunicação com o servidor: ", error);
+        });
+}
+
+// Função para carregar dados da agenda e restaurar seleções
+function loadAgendaDataAndRestoreSelections(date) {
+    loadAgendaData(date);
+    // Após carregar o calendário, restaurar as seleções
+    setTimeout(restoreSelectedDates, 300);
+}
+
+function renderReservaCalendar(date, agenda) {
+    console.log("Renderizando calendário para:", date, "com agenda:", agenda);
+    const month = date.getMonth();
+    const year = date.getFullYear();
+    const currentMonthYearElement = document.getElementById('reservaCurrentMonthYear');
+    if (currentMonthYearElement) {
+        currentMonthYearElement.textContent = date.toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
+    }
+
+    const firstDayOfMonth = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+    const calendar = document.getElementById('reservaCalendar');
+    if (calendar) {
+        // Armazenar as datas atualmente selecionadas antes de redesenhar
+        const currentlySelectedDates = [];
+        if (selectedDates && Array.isArray(selectedDates)) {
+            selectedDates.forEach(item => {
+                if (item.date) {
+                    currentlySelectedDates.push(item.date);
+                }
+            });
+        }
+
+        calendar.innerHTML = '';
+
+        const weekDays = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+        weekDays.forEach(day => {
+            const dayHeader = document.createElement('div');
+            dayHeader.className = 'day-header';
+            dayHeader.textContent = day;
+            calendar.appendChild(dayHeader);
+        });
+
+        for (let i = 0; i < firstDayOfMonth; i++) {
+            const emptyDay = document.createElement('div');
+            emptyDay.className = 'calendar-day';
+            calendar.appendChild(emptyDay);
+        }
+
+        for (let day = 1; day <= daysInMonth; day++) {
+            const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            const dayInfo = agenda[dateStr];
+
+            const dayElement = document.createElement('div');
+            dayElement.className = 'calendar-day';
+            dayElement.setAttribute('data-date', dateStr);
+
+            const dayNumberSpan = document.createElement('span');
+            dayNumberSpan.className = 'day-number';
+            dayNumberSpan.textContent = day;
+            dayElement.appendChild(dayNumberSpan);
+
+            if (dayInfo) {
+                if (dayInfo.status === 'ativo') {
+                    dayElement.classList.add('available');
+                    const priceValue = parseFloat(dayInfo.preco.replace(/\./g, '').replace(',', '.'));
+                    const formattedPrice = priceValue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                    const priceDiv = document.createElement('div');
+                    priceDiv.className = 'price';
+                    priceDiv.textContent = formattedPrice;
+                    dayElement.appendChild(priceDiv);
+                    dayElement.setAttribute('data-price', formattedPrice);
+                } else if (dayInfo.status === 'reservado') {
+                    dayElement.classList.add('reserved');
+                } else if (dayInfo.status === 'pendente') {
+                    dayElement.classList.add('pending', 'reserved'); // Usar a mesma classe visual de reservado mas com estilo adicional
+                }
+            }
+
+            // Restaurar a seleção se a data estava selecionada
+            if (currentlySelectedDates.includes(dateStr)) {
+                dayElement.classList.add('selected');
+            }
+
+            calendar.appendChild(dayElement);
+        }
+    }
+}
+
+// Função para atualizar o display das datas selecionadas (tornada global para ser acessível fora do pageinit)
+// Variável global para armazenar as datas selecionadas no contexto do calendário
+let selectedDates = [];
+
+function updateSelectedDatesDisplay() {
+    const datesList = document.getElementById('selected-dates-list');
+    if (datesList) {
+        datesList.innerHTML = '';
+
+        let totalPrice = 0;
+
+        selectedDates.forEach((item, index) => {
+            const priceValue = parseFloat(item.price.replace('R$', '').replace(/\./g, '').replace(',', '.').trim());
+            totalPrice += priceValue;
+
+            const listItem = document.createElement('li');
+            listItem.className = 'selected-date-item';
+            listItem.innerHTML = `<span class="date-info">${item.formatted} - ${item.price}</span>
+                <button class="remove-date-btn btn btn-danger btn-sm" data-index="${index}" style="margin-left: 10px;">Remover</button>`;
+            datesList.appendChild(listItem);
+        });
+
+        // Atualizar o valor total
+        if (selectedDates.length > 0) {
+            const formattedTotal = totalPrice.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            const totalPriceElement = document.getElementById('selected-total-price-text');
+            const selectedDatesInputElement = document.getElementById('selected_dates_input');
+            const totalPriceInputElement = document.getElementById('total_price_input');
+
+            if (totalPriceElement) totalPriceElement.textContent = formattedTotal;
+            if (selectedDatesInputElement) selectedDatesInputElement.value = JSON.stringify(selectedDates.map(d => d.date));
+            if (totalPriceInputElement) totalPriceInputElement.value = totalPrice;
+
+            const reservaDetails = document.getElementById('reserva-details');
+            if (reservaDetails) {
+                reservaDetails.style.display = 'block';
+            }
+
+            // Atualizar o valor exibido no modal do PIX com base na porcentagem selecionada
+            updatePixModalValue();
+        } else {
+            const totalPriceElement = document.getElementById('selected-total-price-text');
+            const selectedDatesInputElement = document.getElementById('selected_dates_input');
+            const totalPriceInputElement = document.getElementById('total_price_input');
+
+            if (totalPriceElement) totalPriceElement.textContent = '';
+            if (selectedDatesInputElement) selectedDatesInputElement.value = '';
+            if (totalPriceInputElement) totalPriceInputElement.value = '';
+
+            const reservaDetails = document.getElementById('reserva-details');
+            if (reservaDetails) {
+                reservaDetails.style.display = 'none';
+            }
+        }
+    }
+
+    // Save to localStorage whenever the display is updated
+    saveSelectedDatesToStorage();
+}
+
+// Função para atualizar o valor exibido no modal do PIX (tornada global para ser acessível fora do pageinit)
+function updatePixModalValue() {
+    if (selectedDates.length > 0) {
+        const paymentTypeInputs = document.querySelectorAll('input[name="payment_type"]');
+        let selectedPercentage = null;
+
+        for (const input of paymentTypeInputs) {
+            if (input.checked) {
+                selectedPercentage = input.value;
+                break;
+            }
+        }
+
+        const totalPriceInput = document.getElementById('total_price_input');
+        const totalValue = totalPriceInput ? parseFloat(totalPriceInput.value) : 0;
+        const paymentValue = (totalValue * parseInt(selectedPercentage || 50)) / 100;
+        const formattedValue = paymentValue.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+        // Atualizar o valor exibido no modal do PIX se o modal estiver aberto
+        const pixValorElement = document.getElementById('pix-valor');
+        if (pixValorElement) {
+            pixValorElement.textContent = formattedValue;
+        }
+    }
+}
+
+// Script para manipulação do calendário (mantendo a funcionalidade original)
+document.addEventListener('DOMContentLoaded', function() {
+    // Aguardar até que o DOM esteja completamente carregado e o elemento exista
+    const reservaPage = document.getElementById('reservaPageCliente');
+    if (reservaPage) {
+        const prevMonthBtn = document.getElementById('reservaPrevMonth');
+        const nextMonthBtn = document.getElementById('reservaNextMonth');
+        const calendarContainer = document.getElementById('reservaCalendar');
+
+        if (prevMonthBtn) {
+            prevMonthBtn.addEventListener('click', function() {
+                currentDate.setMonth(currentDate.getMonth() - 1);
+                selectedDates = []; // Limpar seleções ao mudar de mês
+                updateSelectedDatesDisplay();
+                loadAgendaData(currentDate);
+            });
+        }
+
+        if (nextMonthBtn) {
+            nextMonthBtn.addEventListener('click', function() {
+                currentDate.setMonth(currentDate.getMonth() + 1);
+                selectedDates = []; // Limpar seleções ao mudar de mês
+                updateSelectedDatesDisplay();
+                loadAgendaData(currentDate);
+            });
+        }
+
+        // Usar event delegation para o calendário
+        if (calendarContainer) {
+            calendarContainer.addEventListener('click', function(e) {
+                if (e.target.classList.contains('available') || e.target.closest('.available')) {
+                    const target = e.target.classList.contains('available') ? e.target : e.target.closest('.available');
+                    const selectedDate = target.getAttribute('data-date');
+                    const selectedPrice = target.getAttribute('data-price');
+                    const dateObj = new Date(selectedDate + 'T00:00:00');
+                    const formattedDate = dateObj.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
+
+                    // Verificar se a data já está selecionada
+                    const existingIndex = selectedDates.findIndex(item => item.date === selectedDate);
+
+                    if (existingIndex >= 0) {
+                        // Remover a data se já estiver selecionada
+                        selectedDates.splice(existingIndex, 1);
+                        target.classList.remove('selected');
+                    } else {
+                        // Adicionar a data se ainda não estiver selecionada
+                        selectedDates.push({date: selectedDate, price: selectedPrice, formatted: formattedDate});
+                        target.classList.add('selected');
+                    }
+
+                    updateSelectedDatesDisplay();
+
+                    // Show reservation details section if there are selected dates
+                    const reservaDetails = document.getElementById('reserva-details');
+                    if (reservaDetails && selectedDates.length > 0) {
+                        reservaDetails.style.display = 'block';
+                    }
+
+                    // Save to localStorage after selection
+                    saveSelectedDatesToStorage();
+                }
+            });
+        }
+
+        // Remover data individualmente
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('remove-date-btn') || e.target.closest('.remove-date-btn')) {
+                e.stopPropagation();
+                const target = e.target.classList.contains('remove-date-btn') ? e.target : e.target.closest('.remove-date-btn');
+                const index = parseInt(target.getAttribute('data-index'));
+                if (index >= 0 && index < selectedDates.length) {
+                    const removedDate = selectedDates[index].date;
+                    selectedDates.splice(index, 1);
+
+                    // Remover a classe 'selected' da célula do calendário
+                    const calendarDay = document.querySelector(`.calendar-day[data-date="${removedDate}"]`);
+                    if (calendarDay) {
+                        calendarDay.classList.remove('selected');
+                    }
+
+                    updateSelectedDatesDisplay();
+
+                    // Save to localStorage after removal
+                    saveSelectedDatesToStorage();
+                }
+            }
+        });
+
+        // Atualizar o valor exibido no modal do PIX quando a porcentagem for alterada
+        document.addEventListener('change', function(e) {
+            if (e.target.name === 'payment_type') {
+                const selectedPercentage = e.target.value;
+                const paymentPercentageInput = document.getElementById('payment_percentage_input');
+                if (paymentPercentageInput) {
+                    paymentPercentageInput.value = selectedPercentage;
+                }
+                updatePixModalValue();
+            }
+        });
+
+        loadAgendaData(currentDate);
+
+    }
+});
+
+// Adicionar uma verificação adicional para garantir que o calendário apareça
+
+// Função para garantir que o calendário é carregado corretamente em diferentes cenários do jQuery Mobile
+function initializeCalendarIfNeeded() {
+    // Salvar as datas atualmente selecionadas antes de recarregar o calendário
+    const currentlySelectedDates = [...selectedDates]; // Cópia do array
+
+    loadAgendaData(currentDate); // Usar a variável global currentDate
+
+    // Após o carregamento, restaurar as seleções se necessário
+    setTimeout(() => {
+        // As seleções serão restauradas automaticamente pelo sistema de renderização
+        // que agora preserva as seleções existentes
+    }, 100);
+}
+
+// Função global para verificar o status do pagamento - definida no escopo global para ser acessível de qualquer lugar
+function checkPaymentStatus(dates) {
+    window.verificationAttempts++;
+    console.log(`Tentativa de verificação #${window.verificationAttempts}`);
+
+    // Adiciona log para rastrear o processo
+    console.log('Iniciando verificação de status do pagamento para datas:', dates);
+
+    // Chamar endpoint para verificar status das reservas
+    fetch('../php/check_reservation_status.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: 'dates=' + encodeURIComponent(dates)
+    })
+    .then(response => {
+        console.log('Resposta recebida do servidor:', response.status);
+        return response.json();
+    })
+    .then(data => {
+        console.log('Dados recebidos da verificação:', data);
+
+        // Verificar se excedeu o número máximo de tentativas (verificar após obter resposta)
+        if (data.success && !data.all_confirmed && window.verificationAttempts >= window.maxVerificationAttempts) {
+            console.log('Número máximo de tentativas de verificação atingido, redirecionando para minhas reservas...');
+            console.log('Detalhes do redirecionamento por limite de tentativas');
+            const paymentStatusIndicator = document.getElementById('payment-status-indicator');
+            if (paymentStatusIndicator) {
+                paymentStatusIndicator.innerHTML = '<p style="color: #ecf0f1; font-size: 10px;">Tempo limite atingido. Redirecionando...</p>';
+            }
+            // Como fallback adicional, também tentar fechar com CSS
+            const modalElement = document.getElementById('pix-modal-overlay');
+            if (modalElement) {
+                modalElement.style.display = 'none';
+                console.log('Modal fechado via CSS fallback');
+            }
+            // Redirecionar imediatamente sem delay para garantir o redirecionamento
+            console.log('Efetuando redirecionamento para suas_reservas.php (limite de tentativas)');
+            window.location.replace('suas_reservas.php');
+            return;
+        }
+        if (data.success) {
+            if (data.all_confirmed) {
+                // Todas as reservas foram confirmadas
+                console.log('Pagamento confirmado detectado, fechando modal...');
+                console.log('Data from server:', data);
+
+                // Adiciona log antes de exibir o alerta de sucesso
+                console.log('Exibindo alerta de sucesso ao usuário');
+
+                // Como fallback adicional, também tentar fechar com CSS
+                const modalElement = document.getElementById('pix-modal-overlay');
+                if (modalElement) {
+                    modalElement.style.display = 'none';
+                    console.log('Modal fechado via CSS fallback após sucesso');
+                }
+
+                // Exibir mensagem de sucesso
+                Swal.fire({
+                    title: 'Sucesso!',
+                    text: 'Pagamento confirmado! Sua reserva está confirmada.',
+                    icon: 'success',
+                    confirmButtonText: 'OK',
+                    confirmButtonColor: '#27ae60'
+                }).then((result) => {
+                    console.log('Usuário confirmou o alerta de sucesso');
+                    // Redirecionar para a página de minhas reservas após mostrar o alerta
+                    console.log('Executando redirecionamento de sucesso para suas_reservas.php');
+                    window.location.replace('suas_reservas.php');
+                }).catch((error) => {
+                    console.error('Erro ao exibir o alerta de sucesso:', error);
+                    // Redirecionar mesmo se houver erro no alerta
+                    console.log('Redirecionando devido a erro no alerta de sucesso');
+                    window.location.replace('suas_reservas.php');
+                });
+            } else {
+                // Ainda aguardando confirmação
+                console.log('Aguardando confirmação de pagamento...', data);
+                const paymentStatusIndicator = document.getElementById('payment-status-indicator');
+                if (paymentStatusIndicator) {
+                    paymentStatusIndicator.innerHTML = '<p style="color: #ecf0f1; font-size: 10px;">Aguardando confirmação de pagamento...</p>';
+                }
+
+                // Verificar novamente após 5 segundos (aumentei o intervalo para reduzir chamadas excessivas)
+                setTimeout(() => {
+                    // Verificar se o modal ainda está aberto antes de continuar verificando
+                    const modalElement = document.getElementById('pix-modal-overlay');
+                    if (modalElement && modalElement.style.display !== 'none' && modalElement.offsetParent !== null) {
+                        // Verificar se excedeu o número máximo de tentativas
+                        if (window.verificationAttempts >= window.maxVerificationAttempts) {
+                            console.log('Número máximo de tentativas de verificação atingido (dentro do timeout), redirecionando para minhas reservas...');
+                            const paymentStatusIndicator = document.getElementById('payment-status-indicator');
+                            if (paymentStatusIndicator) {
+                                paymentStatusIndicator.innerHTML = '<p style="color: #ecf0f1; font-size: 10px;">Tempo limite atingido. Redirecionando...</p>';
+                            }
+                            // Como fallback adicional, também tentar fechar com CSS
+                            const modalElement = document.getElementById('pix-modal-overlay');
+                            if (modalElement) {
+                                modalElement.style.display = 'none';
+                                console.log('Modal fechado via CSS fallback por limite de tentativas no timeout');
+                            }
+                            // Redirecionar imediatamente sem delay para garantir o redirecionamento
+                            console.log('Efetuando redirecionamento para suas_reservas.php (timeout limite de tentativas)');
+                            window.location.replace('suas_reservas.php');
+                        } else {
+                            console.log('Continuando verificação, nova tentativa agendada');
+                            checkPaymentStatus(dates);
+                        }
+                    } else {
+                        console.log('Modal fechado (dentro do timeout), parando verificação automática');
+                    }
+                }, 5000);
+            }
+        } else {
+            // Resetar contador em caso de erro e tentar novamente
+            window.verificationAttempts = Math.max(0, window.verificationAttempts - 1); // Evitar que erro conte como tentativa
+            // Erro na verificação
+            console.log('Erro na verificação do status do pagamento:', data.message);
+            const paymentStatusIndicator = document.getElementById('payment-status-indicator');
+            if (paymentStatusIndicator) {
+                paymentStatusIndicator.innerHTML = '<p style="color: #ecf0f1; font-size: 10px;">Erro na verificação: ' + data.message + '</p>';
+            }
+            // Continuar verificando mesmo em caso de erro, para lidar com possíveis falhas temporárias
+            setTimeout(() => {
+                // Verificar se o modal ainda está aberto antes de continuar verificando
+                const modalElement = document.getElementById('pix-modal-overlay');
+                if (modalElement && modalElement.style.display !== 'none' && modalElement.offsetParent !== null) {
+                    console.log('Continuando verificação apesar do erro, nova tentativa agendada');
+                    checkPaymentStatus(dates);
+                } else {
+                    console.log('Modal fechado (após erro), parando verificação automática');
+                }
+            }, 5000);
+        }
+    })
+    .catch(error => {
+        console.error('Erro completo ao verificar status do pagamento:', error);
+        console.error('Erro de comunicação com o servidor ao verificar pagamento:', error);
+        console.log('Detalhes do erro:', error.message, error.stack);
+        const confirmPaymentBtn = document.getElementById('confirm-payment-btn');
+        if (confirmPaymentBtn) {
+            confirmPaymentBtn.textContent = 'Já paguei, verificar!';
+            confirmPaymentBtn.disabled = false;
+        }
+
+        // Mesmo em caso de erro de comunicação, continuar verificando
+        // Verificar se o modal ainda está aberto antes de continuar verificando
+        const modalElement = document.getElementById('pix-modal-overlay');
+        if (modalElement && modalElement.style.display !== 'none' && modalElement.offsetParent !== null) {
+            console.log('Continuando verificação apesar do erro de comunicação');
+            setTimeout(() => {
+                checkPaymentStatus(dates);
+            }, 5000);
+        } else {
+            console.log('Modal fechado (após erro de comunicação), não continuando verificação');
+        }
+    });
+}
+
+// Eventos para o modal
+document.addEventListener('DOMContentLoaded', function() {
+    // Adicionando manipuladores de eventos para fechar o modal PIX
+    const closePixModalBtn = document.getElementById('close-pix-modal');
+    const cancelReservationBtn = document.getElementById('cancel-reservation-btn');
+
+    if (closePixModalBtn) {
+        closePixModalBtn.addEventListener('click', function() {
+            // Como fallback adicional, também tentar fechar com CSS
+            const modalElement = document.getElementById('pix-modal-overlay');
+            if (modalElement) {
+                modalElement.style.display = 'none';
+            }
+            // Redirect to suas_reservas.php when closing the modal after payment attempt
+            window.location.replace('suas_reservas.php');
+        });
+    }
+
+    if (cancelReservationBtn) {
+        cancelReservationBtn.addEventListener('click', function() {
+            // Como fallback adicional, também tentar fechar com CSS
+            const modalElement = document.getElementById('pix-modal-overlay');
+            if (modalElement) {
+                modalElement.style.display = 'none';
+            }
+            // Redirect to suas_reservas.php when closing the modal after payment attempt
+            window.location.replace('suas_reservas.php');
+        });
+    }
+
+    // Redirect when clicking outside the modal content
+    document.addEventListener('click', function(e) {
+        // Only redirect if the click was directly on the overlay, not on the modal content
+        if (e.target.id === 'pix-modal-overlay') {
+            // Como fallback adicional, também tentar fechar com CSS
+            const modalElement = document.getElementById('pix-modal-overlay');
+            if (modalElement) {
+                modalElement.style.display = 'none';
+            }
+            // Redirect to suas_reservas.php when closing the modal after payment attempt
+            window.location.replace('suas_reservas.php');
+        }
+    });
+    
+    // Variáveis globais para controle de verificação de pagamento (tornadas globais para serem acessíveis fora do document.ready)
+    window.verificationAttempts = 0; // Contador de tentativas de verificação
+    window.maxVerificationAttempts = 24; // Máximo de 24 tentativas (aproximadamente 2 minutos com intervalos de 5 segundos)
+
+    // Eventos para o modal de login
+    const closeLoginModalBtn = document.getElementById('close-login-modal');
+    if (closeLoginModalBtn) {
+        closeLoginModalBtn.addEventListener('click', function() {
+            const loginModal = document.getElementById('login-modal-overlay');
+            if (loginModal) {
+                loginModal.style.display = 'none';
+            }
+        });
+    }
+
+    // Alternar entre login e registro
+    const switchToRegisterBtn = document.getElementById('switch-to-register-btn');
+    const switchToLoginBtn = document.getElementById('switch-to-login-btn');
+    const loginFormContainer = document.getElementById('login-form-container');
+    const registerFormContainer = document.getElementById('register-form-container');
+
+    if (switchToRegisterBtn) {
+        switchToRegisterBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            if (loginFormContainer) loginFormContainer.style.display = 'none';
+            if (registerFormContainer) registerFormContainer.style.display = 'block';
+        });
+    }
+
+    if (switchToLoginBtn) {
+        switchToLoginBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            if (registerFormContainer) registerFormContainer.style.display = 'none';
+            if (loginFormContainer) loginFormContainer.style.display = 'block';
+        });
+    }
+
+    // Submissão do formulário de login no modal
+    const loginModalForm = document.getElementById('loginModalForm');
+    if (loginModalForm) {
+        loginModalForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            loginModal();
+        });
+    }
+
+    // Submissão do formulário de registro no modal
+    const registerModalForm = document.getElementById('registerModalForm');
+    if (registerModalForm) {
+        registerModalForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            registerModal();
+        });
+    }
+
+    // Função para formatar CPF enquanto o usuário digita
+    const cpfInput = document.getElementById('cpf_registro_modal');
+    if (cpfInput) {
+        cpfInput.addEventListener('input', function() {
+            let value = this.value.replace(/\D/g, ''); // Remover tudo que não é dígito
+            if (value.length > 11) value = value.slice(0, 11); // Limitar a 11 dígitos
+
+            if (value.length > 9) {
+                // Formato: XXX.XXX.XXX-XX
+                value = value.replace(/(\d{3})(\d{3})(\d{3})(\d{1,2})/, '$1.$2.$3-$4');
+            } else if (value.length > 6) {
+                // Formato: XXX.XXX.XXX
+                value = value.replace(/(\d{3})(\d{3})(\d{1,3})/, '$1.$2.$3');
+            } else if (value.length > 3) {
+                // Formato: XXX.XXX
+                value = value.replace(/(\d{3})(\d{1,3})/, '$1.$2');
+            }
+
+            this.value = value;
+        });
+    }
+
+    // Função para formatar CEP enquanto o usuário digita
+    const cepInput = document.getElementById('cep_registro_modal');
+    if (cepInput) {
+        cepInput.addEventListener('input', function() {
+            let value = this.value.replace(/\D/g, ''); // Remover tudo que não é dígito
+            if (value.length > 8) value = value.slice(0, 8); // Limitar a 8 dígitos
+
+            if (value.length > 5) {
+                // Formato: XXXXX-XXX
+                value = value.replace(/(\d{5})(\d{3})/, '$1-$2');
+            }
+
+            this.value = value;
+        });
+    }
+
+    // Função para formatar telefone enquanto o usuário digita
+    const telefoneInput = document.getElementById('telefone_registro_modal');
+    if (telefoneInput) {
+        telefoneInput.addEventListener('input', function() {
+            let value = this.value.replace(/\D/g, ''); // Remover tudo que não é dígito
+            if (value.length > 11) value = value.slice(0, 11); // Limitar a 11 dígitos
+
+            if (value.length > 6) {
+                // Formato: (XX) XXXXX-XXXX
+                value = value.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+            } else if (value.length > 2) {
+                // Formato: (XX) XXXX
+                value = value.replace(/(\d{2})(\d{4,5})/, '($1) $2');
+            } else if (value.length > 0) {
+                // Formato: (XX
+                value = value.replace(/(\d{2})/, '($1');
+            }
+
+            this.value = value;
+        });
+    }
+    
+    // Manipulador para o botão de cópia da chave PIX
+    document.addEventListener('click', function(e) {
+        if (e.target.id === 'copy-pix-key-btn' || e.target.closest('#copy-pix-key-btn')) {
+            const pixKeyInput = document.getElementById('pix-key-input');
+            if (pixKeyInput) {
+                // Try to use modern Clipboard API first (for better iOS support)
+                if (navigator.clipboard && window.isSecureContext) {
+                    navigator.clipboard.writeText(pixKeyInput.value).then(function() {
+                        // Mostrar feedback visual
+                        const copyButton = document.getElementById('copy-pix-key-btn');
+                        if (copyButton) {
+                            const originalHTML = copyButton.innerHTML;
+                            copyButton.innerHTML = '<i class="fas fa-check"></i>';
+                            setTimeout(() => {
+                                copyButton.innerHTML = originalHTML;
+                            }, 2000);
+                        }
+
+                        Swal.fire({
+                            title: 'Sucesso!',
+                            text: 'Chave PIX copiada para a área de transferência!',
+                            icon: 'success',
+                            confirmButtonText: 'OK',
+                        });
+                    }).catch(function(err) {
+                        // Fallback to document.execCommand for older browsers
+                        console.error('Erro ao copiar com Clipboard API:', err);
+                        fallbackCopyText(pixKeyInput);
+                    });
+                } else {
+                    // Fallback for browsers that don't support Clipboard API
+                    fallbackCopyText(pixKeyInput);
+                }
+            }
+        }
+    });
+
+    // Fallback function for copying text that works better on iOS
+    function fallbackCopyText(inputElement) {
+        // Create a temporary textarea element since input.select() doesn't work well on iOS
+        const textArea = document.createElement('textarea');
+        textArea.value = inputElement.value;
+        // Move textarea off-screen to prevent scrolling to the bottom
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        textArea.style.top = '-999999px';
+        textArea.style.opacity = '0';
+        textArea.style.pointerEvents = 'none';
+        textArea.style.zIndex = '-999999';
+        document.body.appendChild(textArea);
+
+        // iOS specific approach - need to add to DOM before selection
+        if (/iPad|iPhone|iPod|Macintosh|mac os/i.test(navigator.userAgent)) {
+            // For iOS, we need to add the element, then focus and select
+            textArea.focus();
+            textArea.setSelectionRange(0, textArea.value.length);
+        } else {
+            // For other browsers, select works fine
+            textArea.select();
+        }
+
+        try {
+            // Copy the text
+            let successful = false;
+            if (navigator.clipboard && window.isSecureContext) {
+                // Try using clipboard API as fallback if available
+                navigator.clipboard.writeText(inputElement.value).then(() => {
+                    successful = true;
+                }).catch(() => {
+                    // If clipboard API fails, fall back to execCommand
+                    successful = document.execCommand('copy');
+                });
+            } else {
+                // Use older execCommand method
+                successful = document.execCommand('copy');
+            }
+
+            if (successful) {
+                // Mostrar feedback visual
+                const copyButton = document.getElementById('copy-pix-key-btn');
+                if (copyButton) {
+                    const originalHTML = copyButton.innerHTML;
+                    copyButton.innerHTML = '<i class="fas fa-check"></i>';
+                    setTimeout(() => {
+                        copyButton.innerHTML = originalHTML;
+                    }, 2000);
+                }
+
+                Swal.fire({
+                    title: 'Sucesso!',
+                    text: 'Chave PIX copiada para a área de transferência!',
+                    icon: 'success',
+                    confirmButtonText: 'OK',
+                });
+            } else {
+                // Fallback for when copy fails
+                // On iOS, sometimes we need to show the text to let users manually select and copy
+                // Create a more user-friendly manual copy interface
+                const manualCopyHtml = '<div style="position: relative;">' +
+                                      '<div style="background-color: #f1f1f1; padding: 10px; border-radius: 4px; margin-top: 10px; user-select: text; -webkit-user-select: text; overflow-wrap: break-word; word-break: break-all;">' +
+                                      inputElement.value + '</div>' +
+                                      '<button id="select-all-text-btn" style="margin-top: 8px; padding: 6px 10px; background-color: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">Selecionar Tudo</button>' +
+                                      '</div>';
+
+                Swal.fire({
+                    title: 'Cópia Manual Necessária',
+                    html: '<p>Selecione e copie manualmente o texto abaixo:</p>' + manualCopyHtml,
+                    icon: 'info',
+                    confirmButtonText: 'OK',
+                    confirmButtonColor: '#3498db',
+                    didOpen: () => {
+                        // Add event listener for the select all button
+                        document.getElementById('select-all-text-btn').addEventListener('click', function() {
+                            const textDiv = document.querySelector('div[style*="background-color: #f1f1f1"]');
+                            if (textDiv) {
+                                // Create temporary textarea for selection
+                                const tempTextArea = document.createElement('textarea');
+                                tempTextArea.value = inputElement.value;
+                                tempTextArea.style.position = 'fixed';
+                                tempTextArea.style.left = '-999999px';
+                                tempTextArea.style.top = '-999999px';
+                                tempTextArea.style.opacity = '0';
+                                document.body.appendChild(tempTextArea);
+                                tempTextArea.focus();
+                                tempTextArea.select();
+
+                                try {
+                                    const success = document.execCommand('copy');
+                                    if (success) {
+                                        Swal.fire({
+                                            title: 'Sucesso!',
+                                            text: 'Chave PIX copiada para a área de transferência!',
+                                            icon: 'success',
+                                            confirmButtonText: 'OK',
+                                        });
+                                    } else {
+                                        // On iOS, just focus and select the text in the div
+                                        if (window.getSelection) {
+                                            const selection = window.getSelection();
+                                            const range = document.createRange();
+                                            range.selectNodeContents(textDiv);
+                                            selection.removeAllRanges();
+                                            selection.addRange(range);
+                                        }
+                                    }
+                                } catch (e) {
+                                    console.error('Error during select all:', e);
+                                } finally {
+                                    document.body.removeChild(tempTextArea);
+                                }
+                            }
+                        });
+                    }
+                });
+            }
+        } catch (err) {
+            console.error('Erro ao copiar texto:', err);
+            // Show manual copy instructions for iOS
+            const manualCopyHtml = '<div style="position: relative;">' +
+                                  '<div style="background-color: #f1f1f1; padding: 10px; border-radius: 4px; margin-top: 10px; user-select: text; -webkit-user-select: text; overflow-wrap: break-word; word-break: break-all;">' +
+                                  inputElement.value + '</div>' +
+                                  '<button id="select-all-text-btn" style="margin-top: 8px; padding: 6px 10px; background-color: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">Selecionar Tudo</button>' +
+                                  '</div>';
+
+            Swal.fire({
+                title: 'Cópia Manual Necessária',
+                html: '<p>Selecione e copie manualmente o texto abaixo:</p>' + manualCopyHtml,
+                icon: 'info',
+                confirmButtonText: 'OK',
+                confirmButtonColor: '#3498db',
+                didOpen: () => {
+                    // Add event listener for the select all button
+                    document.getElementById('select-all-text-btn').addEventListener('click', function() {
+                        const textDiv = document.querySelector('div[style*="background-color: #f1f1f1"]');
+                        if (textDiv) {
+                            // Create temporary textarea for selection
+                            const tempTextArea = document.createElement('textarea');
+                            tempTextArea.value = inputElement.value;
+                            tempTextArea.style.position = 'fixed';
+                            tempTextArea.style.left = '-999999px';
+                            tempTextArea.style.top = '-999999px';
+                            tempTextArea.style.opacity = '0';
+                            document.body.appendChild(tempTextArea);
+                            tempTextArea.focus();
+                            tempTextArea.select();
+
+                            try {
+                                const success = document.execCommand('copy');
+                                if (success) {
+                                    Swal.fire({
+                                        title: 'Sucesso!',
+                                        text: 'Chave PIX copiada para a área de transferência!',
+                                        icon: 'success',
+                                        confirmButtonText: 'OK',
+                                    });
+                                } else {
+                                    // On iOS, just focus and select the text in the div
+                                    if (window.getSelection) {
+                                        const selection = window.getSelection();
+                                        const range = document.createRange();
+                                        range.selectNodeContents(textDiv);
+                                        selection.removeAllRanges();
+                                        selection.addRange(range);
+                                    }
+                                }
+                            } catch (e) {
+                                console.error('Error during select all:', e);
+                            } finally {
+                                document.body.removeChild(tempTextArea);
+                            }
+                        }
+                    });
+                }
+            });
+        } finally {
+            // Remove the temporary textarea
+            document.body.removeChild(textArea);
+        }
+    }
+    
+    
+    // Manipulador para o botão de confirmação de pagamento
+    document.addEventListener('click', function(e) {
+        if (e.target.id === 'confirm-payment-btn') {
+            // Verificar se a verificação automática já começou (botão foi escondido)
+            if (e.target.style.display === 'none' || e.target.offsetParent === null) {
+                // A verificação automática já está em andamento, não fazer nada
+                return;
+            }
+
+            // Atualizar o texto e desabilitar o botão para evitar múltiplos cliques
+            e.target.textContent = 'Verificando...';
+            e.target.disabled = true;
+
+            // Mostrar indicador de status
+            const paymentStatusIndicator = document.getElementById('payment-status-indicator');
+            if (paymentStatusIndicator) {
+                paymentStatusIndicator.style.display = 'block';
+            }
+
+            // Obter as datas selecionadas
+            const selectedDatesInput = document.getElementById('selected_dates_input');
+            const selectedDates = selectedDatesInput ? selectedDatesInput.value : '';
+
+            // Resetar contador de tentativas antes de iniciar nova verificação
+            window.verificationAttempts = 0;
+
+            // Iniciar verificação automática do status do pagamento
+            checkPaymentStatus(selectedDates);
+        }
+    });
+    
+    // Função para copiar imagem do QR Code
+    function copyQRCodeImage() {
+        const qrCodeImg = document.getElementById('pix-qr-image');
+        if (qrCodeImg) {
+            // Criar um canvas temporário para converter a imagem para blob
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = qrCodeImg.width;
+            canvas.height = qrCodeImg.height;
+            ctx.drawImage(qrCodeImg, 0, 0);
+            
+            canvas.toBlob(function(blob) {
+                const item = new ClipboardItem({ 'image/png': blob });
+                navigator.clipboard.write([item]).then(function() {
+                    Swal.fire({
+                        title: 'Sucesso!',
+                        text: 'Imagem do QR Code copiada para a área de transferência!',
+                        icon: 'success',
+                        confirmButtonText: 'OK',
+                        confirmButtonColor: '#27ae60'
+                    });
+                }).catch(function(err) {
+                    console.error('Erro ao copiar imagem:', err);
+                    // Fallback: exibir mensagem de instruções
+                    Swal.fire({
+                        title: 'Instruções',
+                        html: 'Para copiar o QR Code, pressione e segure a imagem no celular ou clique com o botão direito e selecione "Copiar imagem" no computador.',
+                        icon: 'info',
+                        confirmButtonText: 'OK',
+                        confirmButtonColor: '#34495e'
+                    });
+                });
+            });
+        }
+    }
+    
+    // Adicionar evento para permitir cópia do QR Code ao clicar nele
+    document.addEventListener('click', function(e) {
+        if (e.target.id === 'pix-qr-image') {
+            copyQRCodeImage();
+        }
+    });
+});
+
+// Associar o evento de clique ao botão após o carregamento da página e garantir que o calendário seja carregado
+document.addEventListener('DOMContentLoaded', function() {
+    const confirmBtn = document.getElementById('confirmReservaBtn');
+    if (confirmBtn) {
+        confirmBtn.addEventListener('click', function() {
+            handleReservaClick();
+        });
+    }
+
+    // Garantir que o calendário é carregado quando a página é mostrada
+    setTimeout(function() {
+        initializeCalendarIfNeeded();
+    }, 50);
+
+    // Restore selected dates when the page loads
+    setTimeout(restoreSelectedDates, 1000); // Small delay to ensure calendar is loaded
+    setTimeout(restoreSelectedDates, 2000); // Try again after calendar is loaded
+});
+
+// Manipulador para o botão de logout
+document.addEventListener('DOMContentLoaded', function() {
+    // Usar delegate para o botão de logout, já que ele é definido no HTML
+    document.addEventListener('click', function(e) {
+        if (e.target.id === 'logout-link-reserva' || e.target.closest('#logout-link-reserva')) {
+            e.preventDefault();
+            const target = e.target.id === 'logout-link-reserva' ? e.target : e.target.closest('#logout-link-reserva');
+
+            fetch('../php/logout.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                }
+            })
+            .then(response => response.json())
+            .then(response => {
+                if(response.success) {
+                    // Limpar possíveis dados da sessão no frontend e redirecionar de forma limpa
+                    window.location.replace('reserva.php');
+                } else {
+                    Swal.fire({
+                        title: 'Erro!',
+                        text: 'Erro ao fazer logout. Por favor, tente novamente.',
+                        icon: 'error',
+                        confirmButtonText: 'OK',
+                        confirmButtonColor: '#e74c3c'
+                    });
+                }
+            })
+            .catch(() => {
+                // Mesmo em caso de erro, redirecionar para a página inicial
+                window.location.href = 'reserva.php';
+            });
+        }
+    });
+
+    
+// Função para limpeza se necessário
+// Esta função pode ser usada para limpar variáveis se necessário
+</script>
+
+<!-- Cookie Consent Modal -->
+<div id="cookie-consent-modal" class="modal fade" tabindex="-1" style="display: none;" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center p-4">
+                <p class="mb-3">Utilizamos cookies para melhorar sua experiência e personalizar as escolhas de reservas. Ao aceitar, você concorda com o uso de cookies conforme nossa Política de Privacidade.</p>
+                <button type="button" class="btn btn-primary" id="accept-cookies" style="background-color: #2c3e50; border-color: #2c3e50;">Aceitar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Check if user has already accepted cookies
+if (!localStorage.getItem('cookiesAccepted')) {
+    // Show cookie consent modal after a delay
+    setTimeout(function() {
+        const cookieModal = document.getElementById('cookie-consent-modal');
+        if (cookieModal) {
+            // Use Bootstrap modal if available
+            if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+                const modal = new bootstrap.Modal(cookieModal);
+                modal.show();
+            } else {
+                // Fallback: show modal using CSS
+                cookieModal.style.display = 'block';
+                cookieModal.classList.add('show');
+                document.body.style.overflow = 'hidden';
+            }
+        }
+    }, 2000); // Show after 2 seconds
+}
+
+// Handle cookie acceptance
+document.getElementById('accept-cookies').addEventListener('click', function() {
+    localStorage.setItem('cookiesAccepted', 'true');
+    const cookieModal = document.getElementById('cookie-consent-modal');
+
+    // Hide modal
+    if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+        const modal = bootstrap.Modal.getInstance(cookieModal) || new bootstrap.Modal(cookieModal);
+        modal.hide();
+    } else {
+        cookieModal.style.display = 'none';
+        cookieModal.classList.remove('show');
+        document.body.style.overflow = '';
+    }
+});
+
+
+
+// Function to save selected dates to localStorage
+function saveSelectedDatesToStorage() {
+    if (selectedDates && selectedDates.length > 0) {
+        localStorage.setItem('selectedDates', JSON.stringify(selectedDates));
+    }
+}
+
+// Update the loginModal function to preserve dates
+function loginModal() {
+    const email = document.getElementById('email_login_modal').value;
+    const senha = document.getElementById('senha_login_modal').value;
+
+    if (!email || !senha) {
+        Swal.fire({
+            title: 'Atenção!',
+            text: 'Por favor, preencha todos os campos.',
+            icon: 'warning',
+            confirmButtonText: 'OK',
+            confirmButtonColor: '#34495e'
+        });
+        return;
+    }
+
+    // Usando fetch para melhor tratamento de erros
+    fetch('../php/cliente_login.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: 'email=' + encodeURIComponent(email) + '&senha=' + encodeURIComponent(senha)
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(response => {
+        if (response.success) {
+            Swal.fire({
+                title: 'Login realizado com sucesso!',
+                text: response.message,
+                icon: 'success',
+                confirmButtonText: 'Continuar',
+                confirmButtonColor: '#27ae60'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Salvar as datas selecionadas no localStorage antes de fechar o modal
+                    if (selectedDates && selectedDates.length > 0) {
+                        localStorage.setItem('selectedDates', JSON.stringify(selectedDates));
+                    }
+
+                    // Fechar o modal de login
+                    const loginModal = document.getElementById('login-modal-overlay');
+                    if (loginModal) {
+                        loginModal.style.display = 'none';
+                    }
+                    // Atualizar a página para refletir o estado de autenticação e permanecer na página de reserva
+                    window.location.href = 'reserva.php';
+                }
+            });
+        } else {
+            // Verificar se a mensagem de erro é "Usuário já está logado"
+            if (response.message && response.message.includes('Usuário já está logado')) {
+                Swal.fire({
+                    title: 'Informação',
+                    text: response.message,
+                    icon: 'info',
+                    confirmButtonText: 'Continuar',
+                    confirmButtonColor: '#3498db'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        // Fechar o modal de login
+                        const loginModal = document.getElementById('login-modal-overlay');
+                        if (loginModal) {
+                            loginModal.style.display = 'none';
+                        }
+                        // Atualizar a página para refletir o estado de autenticação e permanecer na página de reserva
+                        window.location.href = 'reserva.php';
+                    }
+                });
+            } else {
+                Swal.fire({
+                    title: 'Erro!',
+                    text: response.message,
+                    icon: 'error',
+                    confirmButtonText: 'OK',
+                    confirmButtonColor: '#e74c3c'
+                });
+            }
+        }
+    })
+    .catch(error => {
+        console.error('Erro na comunicação com o servidor:', error);
+        // Tratamento de erro genérico
+        Swal.fire({
+            title: 'Erro de comunicação',
+            text: 'Ocorreu um erro na comunicação com o servidor. Por favor, atualize a página e tente novamente.',
+            icon: 'error',
+            confirmButtonText: 'OK',
+            confirmButtonColor: '#dc3545'
+        });
+    });
+}
+
+// Update the registerModal function to preserve dates
+function registerModal() {
+    const nome = document.getElementById('nome_registro_modal').value;
+    const rg = document.getElementById('rg_registro_modal').value;
+    const cpf = document.getElementById('cpf_registro_modal').value;
+    const estadoCivil = document.getElementById('estado_civil_registro_modal').value;
+    const rua = document.getElementById('rua_registro_modal').value;
+    const numero = document.getElementById('numero_registro_modal').value;
+    const bairro = document.getElementById('bairro_registro_modal').value;
+    const cep = document.getElementById('cep_registro_modal').value;
+    const cidade = document.getElementById('cidade_registro_modal').value;
+    const dataNascimento = document.getElementById('data_nascimento_registro_modal').value;
+    const email = document.getElementById('email_registro_modal').value;
+    const telefone = document.getElementById('telefone_registro_modal').value;
+    const senha = document.getElementById('senha_registro_modal').value;
+    const confirmarSenha = document.getElementById('confirmar_senha_registro_modal').value;
+
+    if (!nome || !rg || !cpf || !estadoCivil || !rua || !numero || !bairro || !cep || !cidade || !dataNascimento || !email || !telefone || !senha || !confirmarSenha) {
+        Swal.fire({
+            title: 'Atenção!',
+            text: 'Por favor, preencha todos os campos.',
+            icon: 'warning',
+            confirmButtonText: 'OK',
+            confirmButtonColor: '#34495e'
+        });
+        return;
+    }
+
+    if (senha !== confirmarSenha) {
+        Swal.fire({
+            title: 'Atenção!',
+            text: 'As senhas não coincidem.',
+            icon: 'warning',
+            confirmButtonText: 'OK',
+            confirmButtonColor: '#34495e'
+        });
+        return;
+    }
+
+    // Usando fetch para melhor tratamento de erros
+    fetch('../php/cliente_cadastro.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: 'nome=' + encodeURIComponent(nome) +
+              '&rg=' + encodeURIComponent(rg) +
+              '&cpf=' + encodeURIComponent(cpf) +
+              '&estado_civil=' + encodeURIComponent(estadoCivil) +
+              '&rua=' + encodeURIComponent(rua) +
+              '&numero=' + encodeURIComponent(numero) +
+              '&bairro=' + encodeURIComponent(bairro) +
+              '&cep=' + encodeURIComponent(cep) +
+              '&cidade=' + encodeURIComponent(cidade) +
+              '&data_nascimento=' + encodeURIComponent(dataNascimento) +
+              '&email=' + encodeURIComponent(email) +
+              '&telefone=' + encodeURIComponent(telefone) +
+              '&senha=' + encodeURIComponent(senha) +
+              '&confirmar_senha=' + encodeURIComponent(confirmarSenha)
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+    })
+    .then(response => {
+        if (response.success) {
+            Swal.fire({
+                title: 'Cadastro realizado com sucesso!',
+                text: response.message,
+                icon: 'success',
+                confirmButtonText: 'Continuar',
+                confirmButtonColor: '#27ae60'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Salvar as datas selecionadas no localStorage antes de fechar o modal
+                    if (selectedDates && selectedDates.length > 0) {
+                        localStorage.setItem('selectedDates', JSON.stringify(selectedDates));
+                    }
+
+                    // Fechar o modal de cadastro
+                    const loginModal = document.getElementById('login-modal-overlay');
+                    if (loginModal) {
+                        loginModal.style.display = 'none';
+                    }
+                    // Atualizar a página para refletir o estado de autenticação e permanecer na página de reserva
+                    window.location.href = 'reserva.php';
+                }
+            });
+        } else {
+            Swal.fire({
+                title: 'Erro!',
+                text: response.message,
+                icon: 'error',
+                confirmButtonText: 'OK',
+                confirmButtonColor: '#e74c3c'
+            });
+        }
+    })
+    .catch(error => {
+        console.error('Erro na comunicação com o servidor durante o registro:', error);
+        // Tratamento de erro genérico
+        Swal.fire({
+            title: 'Erro de comunicação',
+            text: 'Ocorreu um erro na comunicação com o servidor. Por favor, atualize a página e tente novamente.',
+            icon: 'error',
+            confirmButtonText: 'OK',
+            confirmButtonColor: '#dc3545'
+        });
+    });
+}
+</script>
+
+</body>
+</html>

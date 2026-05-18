@@ -258,8 +258,8 @@
                         }
                     },
                     error: function(xhr, status, error) {
-                        $('#resultado').html('<p style="color: red;">Erro AJAX: ' + error + '</p>');
-                        console.log('Erro AJAX:', xhr, status, error);
+                        $('#resultado').html('<p style="color: red;">Erro JAVASCRIPT: ' + error + '</p>');
+                        console.log('Erro JAVASCRIPT:', xhr, status, error);
                         Swal.fire({
                             title: 'Erro de Comunicação',
                             text: 'Erro na comunicação com o servidor: ' + error,

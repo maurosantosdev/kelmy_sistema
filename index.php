@@ -33,92 +33,264 @@
     <title>Chácara Recanto do Sossego</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link rel="stylesheet" href="assets/css/jquery.mobile-1.4.5.min.css">
+    <!-- jQuery Mobile CSS - Will be replaced in React/Next.js migration -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://unpkg.com/swiper/swiper-bundle.min.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <link rel="stylesheet" href="cliente/style.css">
+    <style>
+        #header-title-index {
+            color: #34495e !important;
+        }
+
+        /* Estilos responsivos para o cabeçalho com nome do usuário */
+        header.bg-white.text-dark.py-3 {
+            padding: 0.75rem 0 !important;
+        }
+
+        header .h5 {
+            font-size: 1rem;
+            margin-bottom: 0;
+        }
+
+        @media (max-width: 768px) {
+            header.bg-white.text-dark.py-3 {
+                padding: 0.6rem 0 !important;
+            }
+
+            header .h5 {
+                font-size: 0.9rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            header.bg-white.text-dark.py-3 {
+                padding: 0.5rem 0 !important;
+            }
+
+            header .h5 {
+                font-size: 0.85rem;
+            }
+        }
+
+        @media (max-width: 400px) {
+            header.bg-white.text-dark.py-3 {
+                padding: 0.4rem 0 !important;
+            }
+
+            header .h5 {
+                font-size: 0.8rem;
+            }
+        }
+
+        @media (max-width: 350px) {
+            header.bg-white.text-dark.py-3 {
+                padding: 0.3rem 0 !important;
+            }
+
+            header .h5 {
+                font-size: 0.75rem;
+            }
+        }
+
+        @media (max-width: 300px) and (max-height: 660px) {
+            header.bg-white.text-dark.py-3 {
+                padding: 0.25rem 0 !important;
+            }
+
+            header .h5 {
+                font-size: 0.7rem;
+            }
+        }
+
+        /* Estilo para o container do header */
+        .d-flex.justify-content-between.align-items-center {
+            gap: 0.25rem;
+        }
+
+        @media (max-width: 400px) {
+            .d-flex.justify-content-between.align-items-center {
+                gap: 0.2rem;
+            }
+        }
+
+        @media (max-width: 350px) {
+            .d-flex.justify-content-between.align-items-center {
+                gap: 0.15rem;
+            }
+        }
+
+        @media (max-width: 300px) and (max-height: 660px) {
+            .d-flex.justify-content-between.align-items-center {
+                gap: 0.1rem;
+            }
+        }
+
+        /* Estilo específico para o botão no header */
+        header .btn.btn-light.btn-sm {
+            min-height: 1.5rem;
+            min-width: auto;
+            padding: 0.25rem 0.5rem;
+            font-size: 0.875rem;
+        }
+
+        @media (max-width: 768px) {
+            header .btn.btn-light.btn-sm {
+                padding: 0.2rem 0.4rem;
+                font-size: 0.8rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            header .btn.btn-light.btn-sm {
+                padding: 0.15rem 0.3rem;
+                font-size: 0.75rem;
+            }
+        }
+
+        @media (max-width: 400px) {
+            header .btn.btn-light.btn-sm {
+                padding: 0.12rem 0.25rem;
+                font-size: 0.7rem;
+            }
+        }
+
+        @media (max-width: 350px) {
+            header .btn.btn-light.btn-sm {
+                padding: 0.1rem 0.2rem;
+                font-size: 0.65rem;
+            }
+        }
+
+        @media (max-width: 300px) and (max-height: 660px) {
+            header .btn.btn-light.btn-sm {
+                min-height: 1.1rem;
+                padding: 0.05rem 0.15rem !important;
+                font-size: 0.6rem;
+            }
+        }
+    </style>
 </head>
 <body>
-<div data-role="page" id="infoPageCliente">
-    <div data-role="header" data-position="fixed">
-        <!-- MUDANÇA: Nome atualizado no cabeçalho -->
-        <h1 id="header-title-index"><?php echo $is_logged_in ? 'Olá ' . htmlspecialchars($_SESSION['user_name'] ?? 'usuário') : 'Chácara Recanto do Sossego'; ?></h1>
-        <?php if ($is_logged_in): ?>
-            <a href="#" id="logout-link-index" class="ui-btn-right ui-btn ui-corner-all">Sair</a>
-        <?php else: ?>
-            <a href="cliente/login.php" class="ui-btn-right ui-btn ui-corner-all">Entrar</a>
-        <?php endif; ?>
-    </div>
-    <div role="main" class="ui-content">
+<div id="infoPageCliente" class="container-fluid d-flex flex-column" style="min-height: 100vh;">
+    <header class="bg-white text-dark py-3">
+        <div class="container">
+            <div class="d-flex justify-content-between align-items-center">
+                <h1 class="h5 mb-0" id="header-title-index"><?php echo $is_logged_in ? 'Olá ' . htmlspecialchars($_SESSION['user_name'] ?? 'usuário') : 'Chácara Recanto do Sossego'; ?></h1>
+                <?php if ($is_logged_in): ?>
+                    <a href="#" id="logout-link-index" class="btn btn-light btn-sm">Sair</a>
+                <?php else: ?>
+                    <a href="cliente/login.php" class="btn btn-light btn-sm">Entrar</a>
+                <?php endif; ?>
+            </div>
+        </div>
+    </header>
 
-        <div class="card">
-            <div class="swiper-container">
-                <div class="swiper-wrapper">
-                    <?php if (!empty($media_files)): ?>
-                        <?php foreach ($media_files as $file): ?>
-                            <div class="swiper-slide">
-                                <?php
-                                    $extension = strtolower(pathinfo($file, PATHINFO_EXTENSION));
-                                    $file_path = "uploads/" . htmlspecialchars($file);
-                                    if (in_array($extension, ['jpg', 'jpeg', 'png', 'gif', 'webp'])):
-                                ?>
-                                    <!-- MUDANÇA: Nome atualizado no texto alternativo da imagem -->
-                                    <img src="<?php echo $file_path; ?>" alt="Foto da Chácara Recanto do Sossego">
-                                <?php elseif ($extension == 'mp4'): ?>
-                                    <video src="<?php echo $file_path; ?>" playsinline muted loop autoplay></video>
+    <main class="flex-grow-1 py-4">
+        <div class="container">
+            <div class="row justify-content-center">
+                <div class="col-lg-8">
+                    <div class="card mb-4">
+                        <div class="swiper-container">
+                            <div class="swiper-wrapper">
+                                <?php if (!empty($media_files)): ?>
+                                    <?php foreach ($media_files as $file): ?>
+                                        <div class="swiper-slide">
+                                            <?php
+                                                $extension = strtolower(pathinfo($file, PATHINFO_EXTENSION));
+                                                $file_path = "uploads/" . htmlspecialchars($file);
+                                                if (in_array($extension, ['jpg', 'jpeg', 'png', 'gif', 'webp'])):
+                                            ?>
+                                                <!-- MUDANÇA: Nome atualizado no texto alternativo da imagem -->
+                                                <img src="<?php echo $file_path; ?>" class="d-block w-100" alt="Foto da Chácara Recanto do Sossego">
+                                            <?php elseif ($extension == 'mp4'): ?>
+                                                <video src="<?php echo $file_path; ?>" class="d-block w-100" playsinline muted loop autoplay></video>
+                                            <?php endif; ?>
+                                        </div>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <div class="swiper-slide">
+                                         <!-- MUDANÇA: Nome atualizado na imagem padrão -->
+                                        <img src="https://via.placeholder.com/600x300/2c3e50/ffffff?text=Chácara+Recanto+do+Sossego" class="d-block w-100" alt="Bem-vindo">
+                                    </div>
                                 <?php endif; ?>
                             </div>
-                        <?php endforeach; ?>
-                    <?php else: ?>
-                        <div class="swiper-slide">
-                             <!-- MUDANÇA: Nome atualizado na imagem padrão -->
-                            <img src="https://via.placeholder.com/600x300/2c3e50/ffffff?text=Chácara+Recanto+do+Sossego" alt="Bem-vindo">
+                            <!-- Botões de navegação do carrossel -->
+                            <div class="swiper-button-prev"></div>
+                            <div class="swiper-button-next"></div>
                         </div>
-                    <?php endif; ?>
+                    </div>
+
+                    <div class="card mb-4">
+                        <div class="card-body">
+                            <h2 class="card-title">Bem-vindo</h2>
+                            <p class="card-text"><?php echo $info_text; ?></p>
+                        </div>
+                    </div>
+
+                    <div class="card mb-4">
+                        <div class="card-body">
+                            <h2 class="card-title">Contato</h2>
+                            <div class="row text-center">
+                                <div class="col-md-4 mb-3">
+                                    <a href="https://wa.me/5595991244142" target="_blank" class="btn btn-outline-primary d-block">
+                                        <i class="fab fa-whatsapp"></i><br>
+                                        WhatsApp
+                                    </a>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <a href="tel:+5595991244142" class="btn btn-outline-primary d-block">
+                                        <i class="fas fa-phone-alt"></i><br>
+                                        Ligar
+                                    </a>
+                                </div>
+                                <div class="col-md-4 mb-3">
+                                    <a href="#" class="btn btn-outline-primary d-block" onclick="openInstagram(); return false;">
+                                        <i class="fab fa-instagram"></i><br>
+                                        Instagram
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <!-- Botões de navegação do carrossel -->
-                <div class="swiper-button-prev"></div>
-                <div class="swiper-button-next"></div>
             </div>
         </div>
+    </main>
 
-        <div class="card">
-            <h2>Bem-vindo</h2>
-            <p><?php echo $info_text; ?></p>
+    <footer class="fixed-bottom bg-dark text-white py-2">
+        <div class="container-fluid px-0">
+            <nav class="row g-0 text-center">
+                <div class="col-3 py-2">
+                    <a href="../index.php" class="text-white text-decoration-none d-block h-100 d-flex flex-column align-items-center justify-content-center active">
+                        <i class="fas fa-home mb-1"></i>
+                        <small>Inicio</small>
+                    </a>
+                </div>
+                <div class="col-3 py-2">
+                    <a href="cliente/reserva.php" class="text-white text-decoration-none d-block h-100 d-flex flex-column align-items-center justify-content-center">
+                        <i class="fas fa-calendar-alt mb-1"></i>
+                        <small>Reserve</small>
+                    </a>
+                </div>
+                <div class="col-3 py-2">
+                    <a href="cliente/suas_reservas.php" class="text-white text-decoration-none d-block h-100 d-flex flex-column align-items-center justify-content-center">
+                        <i class="fas fa-calendar mb-1"></i>
+                        <small>Reservas</small>
+                    </a>
+                </div>
+                <div class="col-3 py-2">
+                    <a href="cliente/perfil.php" class="text-white text-decoration-none d-block h-100 d-flex flex-column align-items-center justify-content-center">
+                        <i class="fas fa-user mb-1"></i>
+                        <small>Perfil</small>
+                    </a>
+                </div>
+            </nav>
         </div>
-
-        <div class="card">
-             <h2>Contato</h2>
-            <div class="contact-buttons">
-                <a href="https://wa.me/5595991244142" target="_blank" class="contact-btn">
-                    <i class="fab fa-whatsapp"></i>
-                    WhatsApp
-                </a>
-                <a href="tel:+5595991244142" class="contact-btn">
-                    <i class="fas fa-phone-alt"></i>
-                    Ligar
-                </a>
-                <a href="#" class="contact-btn" onclick="openInstagram(); return false;">
-                    <i class="fab fa-instagram"></i>
-                    Instagram
-                </a>
-            </div>
-        </div>
-
-    </div>
-    <div data-role="footer" data-position="fixed">
-        <div data-role="navbar">
-            <ul>
-                <li><a href="../index.php" data-icon="home" class="ui-btn-active ui-state-persist">Inicio</a></li>
-                <li><a href="cliente/reserva.php" data-icon="grid" data-ajax="false">Reserve</a></li>
-                <li><a href="cliente/suas_reservas.php" data-icon="calendar" data-ajax="false">Reservas</a></li>
-                <li><a href="cliente/perfil.php" data-icon="user" data-ajax="false">Perfil</a></li>
-            </ul>
-        </div>
-    </div>
+    </footer>
 </div>
 <script src="assets/js/jquery-1.11.1.min.js"></script>
-<script src="assets/js/jquery.mobile-1.4.5.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://unpkg.com/swiper/swiper-bundle.min.js"></script>
 <script src="cliente/script.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -130,7 +302,7 @@ function openInstagram() {
     const instagramUrl = 'https://www.instagram.com/chacara_r_s';
     // URL do protocolo do Instagram para abrir no aplicativo
     const instagramAppUrl = 'instagram://user?username=chacara_r_s';
-    
+
     // Para iOS
     if (/iPad|iPhone|iPod/.test(navigator.userAgent)) {
         // Tenta abrir o aplicativo do Instagram
@@ -139,7 +311,7 @@ function openInstagram() {
         setTimeout(() => {
             window.open(instagramUrl, '_blank');
         }, 100);
-    } 
+    }
     // Para Android
     else if (/Android/.test(navigator.userAgent)) {
         // Tenta abrir o aplicativo do Instagram
@@ -148,7 +320,7 @@ function openInstagram() {
         setTimeout(() => {
             window.open(instagramUrl, '_blank');
         }, 100);
-    } 
+    }
     // Para outros dispositivos (desktop, etc.)
     else {
         // Abre no navegador
@@ -158,38 +330,37 @@ function openInstagram() {
 
 // Função para carregar o nome do usuário e atualizar o cabeçalho
 function loadUserName() {
-    $.ajax({
-        url: 'php/get_user_info.php',
-        type: 'GET',
-        dataType: 'json',
-        success: function(response) {
+    fetch('php/get_user_info.php')
+        .then(response => response.json())
+        .then(response => {
             if (response.success && response.user_name) {
                 document.getElementById('header-title-index').textContent = 'Olá ' + response.user_name;
             } else {
                 document.getElementById('header-title-index').textContent = 'Chácara Recanto do Sossego';
             }
-        },
-        error: function() {
+        })
+        .catch(() => {
             document.getElementById('header-title-index').textContent = 'Chácara Recanto do Sossego';
-        }
-    });
+        });
 }
 
 // Manipulador para o botão de logout na página de informações
-$(document).on('pageinit', '#infoPageCliente', function() {
+document.addEventListener('DOMContentLoaded', function() {
     // Carregar o nome do usuário para atualizar o cabeçalho, se estiver logado
     <?php if ($is_logged_in): ?>
     loadUserName();
     <?php endif; ?>
-    
-    $('#logout-link-index').on('click', function(e) {
-        e.preventDefault();
-        
-        $.ajax({
-            url: 'php/logout.php',
-            type: 'POST',
-            dataType: 'json',
-            success: function(response) {
+
+    const logoutLink = document.getElementById('logout-link-index');
+    if (logoutLink) {
+        logoutLink.addEventListener('click', function(e) {
+            e.preventDefault();
+
+            fetch('php/logout.php', {
+                method: 'POST',
+            })
+            .then(response => response.json())
+            .then(response => {
                 if(response.success) {
                     // Limpar possíveis dados da sessão no frontend e redirecionar de forma limpa
                     window.location.replace('cliente/login.php');
@@ -201,13 +372,44 @@ $(document).on('pageinit', '#infoPageCliente', function() {
                         confirmButtonText: 'OK'
                     });
                 }
-            },
-            error: function() {
+            })
+            .catch(() => {
                 // Mesmo em caso de erro, redirecionar para login
                 window.location.href = 'cliente/login.php';
-            }
+            });
         });
-    });
+    }
+
+    // Initialize Swiper carousel after DOM is loaded
+    setTimeout(function() {
+        if (typeof Swiper !== 'undefined') {
+            const swiper = new Swiper('.swiper-container', {
+                // Optional parameters
+                direction: 'horizontal',
+                loop: true,
+
+                // Navigation arrows
+                navigation: {
+                    nextEl: '.swiper-button-next',
+                    prevEl: '.swiper-button-prev',
+                },
+
+                // And if we need scrollbar
+                scrollbar: {
+                    el: '.swiper-scrollbar',
+                },
+
+                // Enable autoplay
+                autoplay: {
+                    delay: 3000,
+                    disableOnInteraction: false,
+                },
+
+                // Enable zoom
+                zoom: true,
+            });
+        }
+    }, 100); // Small delay to ensure Swiper is loaded
 });
 </script>
 </body>

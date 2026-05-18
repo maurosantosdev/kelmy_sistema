@@ -5,7 +5,7 @@ require 'db_connect.php';
 // Inicia a sessão para armazenar informações de login
 session_start();
 
-// Define o cabeçalho como JSON para a resposta do AJAX
+// Define o cabeçalho como JSON para a resposta do JAVASCRIPT
 header('Content-Type: application/json');
 
 // Prepara um objeto de resposta

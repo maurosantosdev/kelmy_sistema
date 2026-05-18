@@ -144,7 +144,7 @@ try {
         "description" => $description,
         "payment_method_id" => "pix",
         "external_reference" => implode(',', $reservation_ids), // Usar os IDs reais das reservas
-        "notification_url" => defined('WEBHOOK_URL') ? WEBHOOK_URL : (defined('BASE_URL') ? BASE_URL . '/webhook-mercado-pago.php' : ''),
+        "notification_url" => defined('WEBHOOK_URL') ? WEBHOOK_URL : (defined('BASE_URL') ? BASE_URL . '/webhook-mercado-pago.php' : 'https://chacararecantodosossegorr.com.br/repo_limpo/webhook-mercado-pago.php'),
         "statement_descriptor" => "Chácara Recanto do Sossego",
         "payer" => [
             "type" => "customer",
@@ -152,6 +152,10 @@ try {
             "first_name" => $_SESSION['user_name'] ?? 'Cliente'
         ]
     ];
+
+    // Adicionando log para debug
+    error_log("WEBHOOK DEBUG - notification_url sendo usada: " . $request["notification_url"]);
+    error_log("WEBHOOK DEBUG - external_reference sendo usada: " . $request["external_reference"]);
     
     // Criar o pagamento
     error_log("Tentando criar pagamento no Mercado Pago com os seguintes dados: " . json_encode($request));

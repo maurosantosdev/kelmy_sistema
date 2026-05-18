@@ -89,6 +89,41 @@ try {
 
     // Gerar o conteúdo HTML do recibo para converter para PDF
 
+    // Função para verificar o percentual de pagamento
+    function getPaymentPercentage($pdo, $reservas_ids) {
+        try {
+            // Verificar se os IDs das reservas correspondem aos IDs nos links de pagamento
+            $placeholders = str_repeat('?,', count($reservas_ids) - 1) . '?';
+
+            // Consulta para verificar se os IDs das reservas estão nos links de pagamento
+            // A coluna reservation_ids pode conter múltiplos IDs separados por vírgula, então usamos FIND_IN_SET
+            $sql = "SELECT r.id, r.payment_percentage FROM reservas r ";
+            $sql .= "WHERE r.id IN ($placeholders) ";
+            $sql .= "AND EXISTS (SELECT 1 FROM mp_payment_links mpl WHERE FIND_IN_SET(r.id, mpl.reservation_ids) > 0) ";
+            $sql .= "LIMIT 1"; // Pegamos apenas o primeiro registro com percentual
+
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute($reservas_ids);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            // Verificar se há resultado e retornar o percentual de pagamento
+            if ($result && $result['payment_percentage'] !== null) {
+                return floatval($result['payment_percentage']);
+            }
+
+            return null; // Retorna null se não encontrar correspondência
+        } catch (Exception $e) {
+            error_log("Erro ao verificar percentual de pagamento: " . $e->getMessage());
+            return null;
+        }
+    }
+
+    // Obter o percentual de pagamento
+    $payment_percentage = getPaymentPercentage($pdo, $reservas_ids);
+
+    // Debug: registrar o percentual de pagamento encontrado
+    error_log("Percentual de pagamento encontrado: " . ($payment_percentage !== null ? $payment_percentage : 'null'));
+
     // Debug: verificar se a imagem existe
     $debug_img_path = $_SERVER['DOCUMENT_ROOT'] . '/chacararecantodosossegorr.com.br/repo_limpo/assets/imagens/logo.jpeg';
     if (!file_exists($debug_img_path)) {
@@ -313,7 +348,16 @@ try {
                 // Calcular o número total de diárias
                 $total_diarias = count($datas_reservas);
 
-                $valor_pago = 'R$ ' . number_format($valores_totais, 2, ',', '.');
+                // Calcular o valor pago com base no percentual de pagamento
+                if ($payment_percentage !== null) {
+                    $valor_pago_calculado = $valores_totais * ($payment_percentage / 100);
+                    $valor_pago = 'R$ ' . number_format($valor_pago_calculado, 2, ',', '.');
+                    $forma_pagamento = $payment_percentage . '% (' . getPorcentagemExtenso($payment_percentage) . ')';
+                } else {
+                    $valor_pago = 'R$ ' . number_format($valores_totais, 2, ',', '.');
+                    $forma_pagamento = null;
+                }
+
                 $valor_pago_extenso = numero_extenso($valores_totais);
                 ?>
 
@@ -334,17 +378,41 @@ try {
                                 <span class="receipt-field-value"><?php echo $cliente_documento; ?></span>
                             </div>
 
-                            <div class="receipt-field">
-                                <span class="receipt-field-label">Valor:</span>
-                                <span class="receipt-field-value"><?php echo $valor_pago; ?></span>
-                            </div>
+                            <?php if ($forma_pagamento !== null): ?>
+                                <div class="receipt-field">
+                                    <span class="receipt-field-label">Forma de Pagamento:</span>
+                                    <span class="receipt-field-value"><?php echo $forma_pagamento; ?><?php echo ($payment_percentage == 50) ? ' de entrada.' : ''; ?></span>
+                                </div>
+
+                                <div class="receipt-field">
+                                    <span class="receipt-field-label">Valor pago:</span>
+                                    <span class="receipt-field-value"><?php echo $valor_pago; ?></span>
+                                </div>
+                            <?php else: ?>
+                                <div class="receipt-field">
+                                    <span class="receipt-field-label">Valor:</span>
+                                    <span class="receipt-field-value"><?php echo $valor_pago; ?></span>
+                                </div>
+                            <?php endif; ?>
 
                         </div>
 
                         <div class="receipt-description" style="margin-top: 8px;">
                             <p>Referente a locação da Chácara Recanto do Sossego de 09:00 horas da manhã do dia <?php echo $dataInicio; ?> até as 08:00 horas da manhã do dia <?php echo $dataFim; ?> sendo <?php echo $total_diarias; ?> diária(s).</p>
 
-                            <p>Declaro ainda que o valor estipulado acima foi pago na data presente em parcela única em moeda corrente neste país.</p>
+                            <?php if ($forma_pagamento !== null): ?>
+                                <?php if ($payment_percentage == 50): ?>
+                                    <p>Declaro ainda que o valor estipulado acima foi pago na data presente com a forma de pagamento de <?php echo $forma_pagamento; ?> em moeda corrente
+                                    neste país e os outros 50%, 1 (um) dia antes da data de entrada, totalizando assim a reserva efetivada.</p>
+                                <?php elseif ($payment_percentage == 100): ?>
+                                    <p>Declaro ainda que o valor estipulado acima foi pago na data presente com a forma de pagamento de <?php echo $forma_pagamento; ?> em moeda corrente
+                                    neste país, totalizando assim a reserva efetivada.</p>
+                                <?php else: ?>
+                                    <p>Declaro ainda que o valor estipulado acima foi pago na data presente em parcela única em moeda corrente neste país.</p>
+                                <?php endif; ?>
+                            <?php else: ?>
+                                <p>Declaro ainda que o valor estipulado acima foi pago na data presente em parcela única em moeda corrente neste país.</p>
+                            <?php endif; ?>
 
                             <p>O presente recibo nada declara quanto ao pagamento de outras despesas relacionadas ao imóvel.</p>
                         </div>
@@ -557,5 +625,37 @@ function getMesExtenso($mes) {
     ];
 
     return isset($meses[$mes]) ? $meses[$mes] : $mes;
+}
+
+// Função para converter porcentagem em extenso
+function getPorcentagemExtenso($porcentagem) {
+    $porcentagens = [
+        1 => 'um por cento',
+        2 => 'dois por cento',
+        3 => 'três por cento',
+        4 => 'quatro por cento',
+        5 => 'cinco por cento',
+        10 => 'dez por cento',
+        15 => 'quinze por cento',
+        20 => 'vinte por cento',
+        25 => 'vinte e cinco por cento',
+        30 => 'trinta por cento',
+        40 => 'quarenta por cento',
+        50 => 'cinquenta por cento',
+        60 => 'sessenta por cento',
+        70 => 'setenta por cento',
+        75 => 'setenta e cinco por cento',
+        80 => 'oitenta por cento',
+        90 => 'noventa por cento',
+        100 => 'cem por cento'
+    ];
+
+    if (isset($porcentagens[$porcentagem])) {
+        return $porcentagens[$porcentagem];
+    } else {
+        // Para valores não previstos, converter numericamente
+        $extenso = numero_extenso($porcentagem);
+        return $extenso . ' por cento';
+    }
 }
 ?>

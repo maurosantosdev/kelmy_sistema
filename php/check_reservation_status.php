@@ -71,7 +71,7 @@ if ($reserva_id) {
     if ($is_reservation_ids) {
         // Consultar status das reservas pelos IDs
         $placeholders = str_repeat('?,', count($ids) - 1) . '?';
-        $stmt = $conn->prepare("SELECT id, status FROM reservas WHERE user_id = ? AND id IN ($placeholders) ORDER BY data ASC");
+        $stmt = $conn->prepare("SELECT id, status, payment_confirmed_at FROM reservas WHERE user_id = ? AND id IN ($placeholders) ORDER BY data ASC");
         $params = array_merge([$user_id], $ids);
         $stmt->bind_param(str_repeat('s', count($params)), ...$params);
         $stmt->execute();
@@ -81,7 +81,10 @@ if ($reserva_id) {
         $all_confirmed = true;
 
         while ($row = $result->fetch_assoc()) {
-            $reservations_status[$row['id']] = $row['status'];
+            $reservations_status[$row['id']] = [
+                'status' => $row['status'],
+                'payment_confirmed_at' => $row['payment_confirmed_at']
+            ];
             if ($row['status'] !== 'confirmado') {
                 $all_confirmed = false;
             }
@@ -89,7 +92,7 @@ if ($reserva_id) {
     } else {
         // Consultar status das reservas pelas datas (funcionalidade antiga)
         $placeholders = str_repeat('?,', count($ids) - 1) . '?';
-        $stmt = $conn->prepare("SELECT data, status FROM reservas WHERE user_id = ? AND data IN ($placeholders) ORDER BY data ASC");
+        $stmt = $conn->prepare("SELECT data, status, payment_confirmed_at FROM reservas WHERE user_id = ? AND data IN ($placeholders) ORDER BY data ASC");
         $params = array_merge([$user_id], $ids);
         $stmt->bind_param(str_repeat('s', count($params)), ...$params);
         $stmt->execute();
@@ -99,7 +102,10 @@ if ($reserva_id) {
         $all_confirmed = true;
 
         while ($row = $result->fetch_assoc()) {
-            $reservations_status[$row['data']] = $row['status'];
+            $reservations_status[$row['data']] = [
+                'status' => $row['status'],
+                'payment_confirmed_at' => $row['payment_confirmed_at']
+            ];
             if ($row['status'] !== 'confirmado') {
                 $all_confirmed = false;
             }
@@ -115,10 +121,43 @@ if ($reserva_id) {
             'reservations_status' => $reservations_status
         ]);
     } else {
+        // Verificar se alguma reserva foi confirmada recentemente (nos últimos 10 minutos)
+        $has_recent_confirmation = false;
+        $recent_confirmed_count = 0;
+        $total_confirmed_count = 0;
+
+        foreach ($reservations_status as $status_info) {
+            if (is_array($status_info)) {
+                if ($status_info['status'] === 'confirmado') {
+                    $total_confirmed_count++;
+
+                    if (!empty($status_info['payment_confirmed_at'])) {
+                        $confirmation_time = new DateTime($status_info['payment_confirmed_at']);
+                        $current_time = new DateTime();
+                        $interval = $current_time->diff($confirmation_time);
+
+                        // Se a confirmação foi feita há menos de 10 minutos, considerar como recente
+                        if ($interval->i < 10 && $interval->h === 0 && $interval->d === 0) {
+                            $has_recent_confirmation = true;
+                            $recent_confirmed_count++;
+                        }
+                    }
+                }
+            } else {
+                // Caso o status_info seja uma string (versão antiga)
+                if ($status_info === 'confirmado') {
+                    $total_confirmed_count++;
+                }
+            }
+        }
+
         echo json_encode([
             'success' => true,
             'all_confirmed' => false,
-            'message' => 'Aguardando confirmação de pagamento',
+            'has_recent_confirmation' => $has_recent_confirmation,
+            'recent_confirmed_count' => $recent_confirmed_count,
+            'total_confirmed_count' => $total_confirmed_count,
+            'message' => $has_recent_confirmation ? 'Confirmação de pagamento recebida recentemente' : 'Aguardando confirmação de pagamento',
             'reservations_status' => $reservations_status
         ]);
     }

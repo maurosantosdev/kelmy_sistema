@@ -169,7 +169,7 @@ $(document).on('pageinit', '#infoPage', function() {
                 }
             },
             error: function(jqXHR, textStatus, errorThrown) {
-                console.error("Erro na chamada AJAX para get_info: ", textStatus, errorThrown);
+                console.error("Erro na chamada JAVASCRIPT para get_info: ", textStatus, errorThrown);
             }
         });
     }
@@ -225,7 +225,7 @@ $(document).on('pageinit', '#infoPage', function() {
             },
             error: function(jqXHR, textStatus, errorThrown) {
                  $('#formMessage').text("Erro de comunicação crítico. Verifique se o servidor está online.").css('color', '#F44336');
-                 console.error("Erro AJAX ao salvar:", textStatus, errorThrown, jqXHR.responseText);
+                 console.error("Erro JAVASCRIPT ao salvar:", textStatus, errorThrown, jqXHR.responseText);
             },
             complete: function() {
                 $('#saveInfoBtn').prop('disabled', false).text('Atualizar Informações');
@@ -279,7 +279,7 @@ $(document).on('pageshow', '#contratoPage', function() {
                 }
             },
             error: function(jqXHR, textStatus, errorThrown) {
-                console.error("Erro na chamada AJAX para get_contract: ", textStatus, errorThrown);
+                console.error("Erro na chamada JAVASCRIPT para get_contract: ", textStatus, errorThrown);
                 console.error("Erro detalhado:", jqXHR.responseText);
                 // Mesmo em caso de erro, inicializar com uma lista vazia
                 renderContractItems([]);

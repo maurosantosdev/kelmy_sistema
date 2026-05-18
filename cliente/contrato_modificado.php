@@ -98,38 +98,6 @@ function getPorcentagemExtenso($porcentagem) {
     }
 }
 
-// Função para converter valores monetários em extenso, incluindo centavos
-function valor_em_extenso($valor) {
-    $valor = floatval($valor);
-
-    // Separar reais e centavos
-    $reais = intval($valor);
-    $centavos = round(($valor - $reais) * 100);
-
-    // Converter reais para extenso
-    $reais_extenso = '';
-    if ($reais > 0) {
-        $reais_extenso = numero_extenso($reais) . (($reais == 1) ? ' real' : ' reais');
-    }
-
-    // Converter centavos para extenso
-    $centavos_extenso = '';
-    if ($centavos > 0) {
-        $centavos_extenso = numero_extenso($centavos) . (($centavos == 1) ? ' centavo' : ' centavos');
-    }
-
-    // Montar a frase completa
-    if ($reais > 0 && $centavos > 0) {
-        return $reais_extenso . ' e ' . $centavos_extenso;
-    } elseif ($reais > 0) {
-        return $reais_extenso;
-    } elseif ($centavos > 0) {
-        return $centavos_extenso;
-    } else {
-        return 'zero reais';
-    }
-}
-
 // Obter o ID da reserva da URL (se fornecido)
 $reserva_id_fornecido = isset($_GET['reserva_id']) ? $_GET['reserva_id'] : null;
 
@@ -736,17 +704,21 @@ if (isset($num_diarias_to_display)) {
                         if ($payment_percentage == 50) {
                             // 50% payment: texto modificado conforme requisitos
                             $valor_extenso = numero_extenso(intval($total_valor));
-                            echo "O aluguel da temporada corresponde a ".count($reservas_atuais)." diária".(count($reservas_atuais) > 1 ? 's' : '')." totalizando o valor de R$".number_format($total_valor, 2, ',', '.')." (".$valor_extenso." reais). Foi pago 50% (".getPorcentagemExtenso(50).") do valor de sinal referente ao valor de R$ ".number_format($valor_pago, 2, ',', '.')." (".ucfirst(valor_em_extenso($valor_pago)).") para contratação da(s) data(s) estipulada(s) na assinatura do contrato. E os outros 50% (".getPorcentagemExtenso(50).") 01 (um) dia antes da data de entrada, totalizando assim a reserva efetivada;";
+                            $valor_pago_extenso = numero_extenso(intval($valor_pago));
+                            $cents_part = substr(number_format($valor_pago, 2, ',', '.'), -2);
+                            echo "O aluguel da temporada corresponde a ".count($reservas_atuais)." diária".(count($reservas_atuais) > 1 ? 's' : '')." totalizando o valor de R$".number_format($total_valor, 2, ',', '.')." (".$valor_extenso." reais). Foi pago 50% (".getPorcentagemExtenso(50).") do valor de sinal referente ao valor de R$ ".number_format($valor_pago, 2, ',', '.')." (".ucfirst($valor_pago_extenso)." reais e ".$cents_part." centavos) para contratação da(s) data(s) estipulada(s) na assinatura do contrato. E os outros 50% (".getPorcentagemExtenso(50).") 01 (um) dia antes da data de entrada, totalizando assim a reserva efetivada;";
                             if(count($reservas_atuais) > 1):
                             echo " Caso o cliente selecione mais de um dia, estes serão especificados como dias únicos ou consecutivos de acordo com a escolha do cliente.";
                             endif;
                             echo " Caso o cliente escolha o pagamento ser 100% do valor, a porcentagem será alterada para refletir o pagamento total das diárias selecionadas.";
                         } elseif ($payment_percentage == 100) {
                             // 100% payment: texto modificado conforme requisitos
-                            echo "O aluguel da temporada corresponde a ".count($reservas_atuais)." diária".(count($reservas_atuais) > 1 ? 's' : '')." totalizando R$".number_format($total_valor, 2, ',', '.')." (".ucfirst(valor_em_extenso($total_valor))."), totalizando assim a reserva efetivada com os dias selecionados.";
+                            $valor_extenso = numero_extenso(intval($total_valor));
+                            echo "O aluguel da temporada corresponde a ".count($reservas_atuais)." diária".(count($reservas_atuais) > 1 ? 's' : '')." totalizando R$".number_format($total_valor, 2, ',', '.')." (".$valor_extenso." reais), totalizando assim a reserva efetivada com os dias selecionados.";
                         } else {
                             // Outro percentual
-                            echo "O aluguel da temporada corresponde a ".count($reservas_atuais)." diária".(count($reservas_atuais) > 1 ? 's' : '')." totalizando R$".number_format($total_valor, 2, ',', '.')." (".ucfirst(valor_em_extenso($total_valor))."). E será pago ".$payment_percentage."% (".getPorcentagemExtenso($payment_percentage).") do valor de sinal para contratação da data estipulada na assinatura do contrato e os outros ".(100-$payment_percentage)."% (".getPorcentagemExtenso(100-$payment_percentage).") 1 (um) dia antes da data de entrada, totalizando assim a reserva efetivada;";
+                            $valor_extenso = numero_extenso(intval($total_valor));
+                            echo "O aluguel da temporada corresponde a ".count($reservas_atuais)." diária".(count($reservas_atuais) > 1 ? 's' : '')." totalizando R$".number_format($total_valor, 2, ',', '.')." (".$valor_extenso." reais). E será pago ".$payment_percentage."% (".getPorcentagemExtenso($payment_percentage).") do valor de sinal para contratação da data estipulada na assinatura do contrato e os outros ".(100-$payment_percentage)."% (".getPorcentagemExtenso(100-$payment_percentage).") 1 (um) dia antes da data de entrada, totalizando assim a reserva efetivada;";
                             if(count($reservas_atuais) > 1):
                             echo " Caso o cliente selecione mais de um dia, estes serão especificados como dias únicos ou consecutivos de acordo com a escolha do cliente.";
                             endif;
@@ -759,10 +731,12 @@ if (isset($num_diarias_to_display)) {
 
                         if ($tipo_porcentagem_atual == '100') {
                             // 100% payment: texto mais curto e direto
-                            echo "O aluguel da temporada corresponde a ".count($reservas_atuais)." diária".(count($reservas_atuais) > 1 ? 's' : '')." totalizando R$".number_format($total_valor, 2, ',', '.')." (".ucfirst(valor_em_extenso($total_valor))."), totalizando assim a reserva efetivada com os dias selecionados.";
+                            $valor_extenso = numero_extenso(intval($total_valor));
+                            echo "O aluguel da temporada corresponde a ".count($reservas_atuais)." diária".(count($reservas_atuais) > 1 ? 's' : '')." totalizando R$".number_format($total_valor, 2, ',', '.')." (".$valor_extenso." reais), totalizando assim a reserva efetivada com os dias selecionados.";
                         } else {
                             // 50% payment or other: texto padrão com detalhes de pagamento
-                            echo "O aluguel da temporada corresponde a ".count($reservas_atuais)." diária".(count($reservas_atuais) > 1 ? 's' : '')." totalizando R$".number_format($total_valor, 2, ',', '.')." (".ucfirst(valor_em_extenso($total_valor))."). E será pago 50% do valor de sinal para contratação da data estipulada na assinatura do contrato e os outros 50% 1 (um) dia antes da data de entrada, totalizando assim a reserva efetivada;";
+                            $valor_extenso = numero_extenso(intval($total_valor));
+                            echo "O aluguel da temporada corresponde a ".count($reservas_atuais)." diária".(count($reservas_atuais) > 1 ? 's' : '')." totalizando R$".number_format($total_valor, 2, ',', '.')." (".$valor_extenso." reais). E será pago 50% do valor de sinal para contratação da data estipulada na assinatura do contrato e os outros 50% 1 (um) dia antes da data de entrada, totalizando assim a reserva efetivada;";
                             if(count($reservas_atuais) > 1):
                             echo " Caso o cliente selecione mais de um dia, estes serão especificados como dias únicos ou consecutivos de acordo com a escolha do cliente.";
                             endif;
@@ -780,16 +754,16 @@ if (isset($num_diarias_to_display)) {
                             $valor_pago_50 = array_sum(array_column($reservas_atuais, 'valor')) * 0.5;
                             ?>
                             <p>Forma de Pagamento: 50% (<?php echo getPorcentagemExtenso(50); ?>) de entrada.</p>
-                            <p>Valor pago: R$ <?php echo number_format($valor_pago_50, 2, ',', '.'); ?> (<?php echo ucfirst(valor_em_extenso($valor_pago_50)); ?>).</p>
+                            <p>Valor pago: R$ <?php echo number_format($valor_pago_50, 2, ',', '.'); ?> (<?php echo ucfirst(numero_extenso(intval($valor_pago_50))); ?> reais).</p>
                         <?php elseif ($payment_percentage == 100): ?>
                             <?php
                             $valor_pago_100 = array_sum(array_column($reservas_atuais, 'valor'));
                             ?>
                             <p>Forma de Pagamento: 100% (<?php echo getPorcentagemExtenso(100); ?>).</p>
-                            <p>Valor pago: R$ <?php echo number_format($valor_pago_100, 2, ',', '.'); ?> (<?php echo ucfirst(valor_em_extenso($valor_pago_100)); ?>).</p>
+                            <p>Valor pago: R$ <?php echo number_format($valor_pago_100, 2, ',', '.'); ?> (<?php echo ucfirst(numero_extenso(intval($valor_pago_100))); ?> reais).</p>
                         <?php endif; ?>
                     <?php endif; ?>
-                    <p>Valor Total das Reservas Atuais: R$<?php echo number_format(array_sum(array_column($reservas_atuais, 'valor')), 2, ',', '.'); ?> (<?php echo ucfirst(valor_em_extenso(array_sum(array_column($reservas_atuais, 'valor')))); ?>)</p>
+                    <p>Valor Total das Reservas Atuais: R$<?php echo number_format(array_sum(array_column($reservas_atuais, 'valor')), 2, ',', '.'); ?> (<?php echo numero_extenso(intval(array_sum(array_column($reservas_atuais, 'valor')))); ?> reais)</p>
                 </div>
 
                 <?php else: ?>
@@ -800,7 +774,7 @@ if (isset($num_diarias_to_display)) {
                 
                 <!-- Valor total das reservas quando não há reservas -->
                 <div class="contract-section" style="font-weight: bold; text-align: center; margin: 15px 0; padding: 10px; background-color: #f0f0f0; border: 1px solid #ccc;">
-                    <p>Valor Total das Reservas: R$0,00 (<?php echo ucfirst(valor_em_extenso(0)); ?>)</p>
+                    <p>Valor Total das Reservas: R$0,00 (zero reais)</p>
                 </div>
                 
                 <?php endif; ?>
@@ -812,7 +786,7 @@ if (isset($num_diarias_to_display)) {
                             locador; A(O) LOCADOR(A) não se responsabiliza no caso de o evento não se realizar por motivos que não possam ser acarretados ao mesmo e, portanto, não
                             devolverá o pagamento.
                         <?php elseif ($payment_percentage == 100): ?>
-                            O aluguel da temporada corresponde a <?php echo count($reservas_atuais); ?> diária<?php echo (count($reservas_atuais) > 1 ? 's' : ''); ?> totalizando R$<?php echo number_format($total_valor, 2, ',', '.'); ?> (<?php echo ucfirst(valor_em_extenso($total_valor)); ?>), totalizando assim a reserva efetivada com os dias selecionados.
+                            O aluguel da temporada corresponde a <?php echo count($reservas_atuais); ?> diária<?php echo (count($reservas_atuais) > 1 ? 's' : ''); ?> totalizando R$<?php echo number_format($total_valor, 2, ',', '.'); ?> (<?php echo numero_extenso(intval($total_valor)); ?> reais), totalizando assim a reserva efetivada com os dias selecionados.
                             Em caso de desistência por parte do LOCATÁRIO(A) fica retido 50% (<?php echo getPorcentagemExtenso(50); ?>) pagos como sinal e não serão devolvido, sendo assim esse valor considerado como Multa a favor do locador; A(O) LOCADOR(A) não se responsabiliza no caso de o evento não se realizar por motivos que não possam ser acarretados ao mesmo e, portanto, não devolverá o pagamento.
                         <?php else: ?>
                             Em caso de desistência por parte do LOCATÁRIO(A) os <?php echo $payment_percentage; ?>% (<?php echo getPorcentagemExtenso($payment_percentage); ?>) pagos como sinal não será devolvido, sendo assim esse valor considerado como Multa a favor do

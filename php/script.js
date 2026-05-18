@@ -16,7 +16,7 @@ $(document).on('pageinit', '#loginPage', function() {
         var usuario = $('#usuario').val();
         var senha = $('#senha').val();
 
-        // Envia os dados para o script PHP via AJAX
+        // Envia os dados para o script PHP via JAVASCRIPT
         $.ajax({
             url: '../php/admin_login.php',
             type: 'POST',

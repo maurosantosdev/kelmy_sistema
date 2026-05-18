@@ -1,0 +1,2339 @@
+<?php
+// Verificar se deve gerar PDF
+$gerar_pdf = isset($_GET['format']) && $_GET['format'] === 'pdf';
+
+if ($gerar_pdf) {
+    // Iniciar buffer de saída para capturar o conteúdo HTML
+    ob_start();
+}
+
+// Verificar se o usuário está autenticado
+if (session_status() == PHP_SESSION_NONE) {
+    session_start();
+}
+
+// Debug: Log session info to help troubleshoot
+error_log("CONTRATO.PHP - Session status: " . (isset($_SESSION['user_id']) ? 'authenticated' : 'not authenticated'));
+error_log("CONTRATO.PHP - User ID: " . ($_SESSION['user_id'] ?? 'none'));
+error_log("CONTRATO.PHP - Request URI: " . ($_SERVER['REQUEST_URI'] ?? 'unknown'));
+error_log("CONTRATO.PHP - Referer: " . ($_SERVER['HTTP_REFERER'] ?? 'none'));
+
+if (!isset($_SESSION['user_id'])) {
+    // Redirecionar para página de login se não estiver autenticado
+    error_log("CONTRATO.PHP - Redirecting to login.php - user not authenticated");
+    header("Location: login.php");
+    exit();
+} else {
+    error_log("CONTRATO.PHP - User is authenticated, proceeding to load contract");
+}
+
+// Temporary debug output to see if PHP is processing
+error_log("CONTRATO.PHP - Reached after authentication check");
+
+require '../php/db_connect.php';
+
+// Função para converter números em extenso (até 1000)
+function numero_extenso($numero) {
+    $unidades = [
+        0 => 'zero', 1 => 'um', 2 => 'dois', 3 => 'três', 4 => 'quatro', 5 => 'cinco',
+        6 => 'seis', 7 => 'sete', 8 => 'oito', 9 => 'nove', 10 => 'dez',
+        11 => 'onze', 12 => 'doze', 13 => 'treze', 14 => 'catorze', 15 => 'quinze',
+        16 => 'dezesseis', 17 => 'dezessete', 18 => 'dezoito', 19 => 'dezenove', 20 => 'vinte',
+        30 => 'trinta', 40 => 'quarenta', 50 => 'cinquenta', 60 => 'sessenta',
+        70 => 'setenta', 80 => 'oitenta', 90 => 'noventa', 100 => 'cem',
+        200 => 'duzentos', 300 => 'trezentos', 400 => 'quatrocentos', 500 => 'quinhentos',
+        600 => 'seiscentos', 700 => 'setecentos', 800 => 'oitocentos', 900 => 'novecentos'
+    ];
+
+    if ($numero <= 20) {
+        return $unidades[$numero];
+    } elseif ($numero < 100) {
+        $dezena = floor($numero / 10) * 10;
+        $unidade = $numero % 10;
+        if ($unidade == 0) {
+            return $unidades[$dezena];
+        } else {
+            return $unidades[$dezena] . ' e ' . $unidades[$unidade];
+        }
+    } elseif ($numero < 1000) {
+        $centena = floor($numero / 100) * 100;
+        $resto = $numero % 100;
+
+        if ($centena == 100 && $resto == 0) {
+            return 'cem';
+        } elseif ($resto == 0) {
+            return $unidades[$centena];
+        } else {
+            return $unidades[$centena] . ' e ' . numero_extenso($resto);
+        }
+    } else {
+        // Lida com números maiores que 1000
+        $milhar = floor($numero / 1000);
+        $resto = $numero % 1000;
+
+        if ($milhar == 1) {
+            if ($resto == 0) {
+                return 'mil';
+            } else {
+                return 'mil e ' . numero_extenso($resto);
+            }
+        } else {
+            if ($resto == 0) {
+                return numero_extenso($milhar) . ' mil';
+            } else {
+                return numero_extenso($milhar) . ' mil e ' . numero_extenso($resto);
+            }
+        }
+    }
+}
+
+// Função para converter mês numérico para extenso
+function getMesExtenso($mes) {
+    $meses = [
+        '01' => 'janeiro', '02' => 'fevereiro', '03' => 'março', '04' => 'abril',
+        '05' => 'maio', '06' => 'junho', '07' => 'julho', '08' => 'agosto',
+        '09' => 'setembro', '10' => 'outubro', '11' => 'novembro', '12' => 'dezembro'
+    ];
+    return $meses[$mes] ?? 'mês inválido';
+}
+
+// Função para converter porcentagem em extenso
+function getPorcentagemExtenso($porcentagem) {
+    $porcentagens = [
+        1 => 'um por cento',
+        2 => 'dois por cento',
+        3 => 'três por cento',
+        4 => 'quatro por cento',
+        5 => 'cinco por cento',
+        10 => 'dez por cento',
+        15 => 'quinze por cento',
+        20 => 'vinte por cento',
+        25 => 'vinte e cinco por cento',
+        30 => 'trinta por cento',
+        40 => 'quarenta por cento',
+        50 => 'cinquenta por cento',
+        60 => 'sessenta por cento',
+        70 => 'setenta por cento',
+        75 => 'setenta e cinco por cento',
+        80 => 'oitenta por cento',
+        90 => 'noventa por cento',
+        100 => 'cem por cento'
+    ];
+
+    if (isset($porcentagens[$porcentagem])) {
+        return $porcentagens[$porcentagem];
+    } else {
+        // Para valores não previstos, converter numericamente
+        $extenso = numero_extenso($porcentagem);
+        return $extenso . ' por cento';
+    }
+}
+
+// Obter o ID da reserva da URL (se fornecido)
+$reserva_id_fornecido = isset($_GET['reserva_id']) ? $_GET['reserva_id'] : null;
+
+// Obter IDs das reservas da URL (se fornecido como JSON)
+$reservas_ids_json = isset($_GET['reservas_ids']) ? $_GET['reservas_ids'] : null;
+$reservas_ids = null;
+
+if ($reservas_ids_json) {
+    // Decodificar o parâmetro da URL antes de fazer o JSON decode
+    $decoded_json = urldecode($reservas_ids_json);
+    $reservas_ids_array = json_decode($decoded_json, true);
+    if (is_array($reservas_ids_array)) {
+        $reservas_ids = $reservas_ids_array;
+    } else {
+        // Log de erro para debug
+        error_log("DEBUG contrato.php - Erro ao decodificar JSON: " . $decoded_json . " - Erro: " . json_last_error_msg());
+    }
+    // Debug: Remover depois de testar
+    error_log("DEBUG contrato.php - reservas_ids_json recebido: " . $reservas_ids_json);
+    error_log("DEBUG contrato.php - decoded_json: " . $decoded_json);
+    error_log("DEBUG contrato.php - reservas_ids decodificado: " . json_encode($reservas_ids));
+}
+
+// Função para verificar o percentual de pagamento
+function getPaymentPercentageFromReservations($conn, $reservas_ids) {
+    try {
+        if (empty($reservas_ids)) {
+            return null;
+        }
+
+        // Verificar se os IDs das reservas correspondem aos IDs nos links de pagamento
+        $placeholders = str_repeat('?,', count($reservas_ids) - 1) . '?';
+
+        // Consulta para verificar se os IDs das reservas estão nos links de pagamento
+        // A coluna reservation_ids pode conter múltiplos IDs separados por vírgula, então usamos FIND_IN_SET
+        $sql = "SELECT r.id, r.payment_percentage FROM reservas r ";
+        $sql .= "WHERE r.id IN ($placeholders) ";
+        $sql .= "AND EXISTS (SELECT 1 FROM mp_payment_links mpl WHERE FIND_IN_SET(r.id, mpl.reservation_ids) > 0) ";
+        $sql .= "LIMIT 1"; // Pegamos apenas o primeiro registro com percentual
+
+        $stmt = $conn->prepare($sql);
+        if (!$stmt) {
+            error_log("Erro na preparação da consulta: " . $conn->error);
+            return null;
+        }
+
+        $stmt->bind_param(str_repeat('s', count($reservas_ids)), ...$reservas_ids);
+        $stmt->execute();
+        $result = $stmt->get_result();
+
+        // Verificar se há resultado e retornar o percentual de pagamento
+        if ($row = $result->fetch_assoc()) {
+            if ($row['payment_percentage'] !== null) {
+                return floatval($row['payment_percentage']);
+            }
+        }
+
+        return null; // Retorna null se não encontrar correspondência
+    } catch (Exception $e) {
+        error_log("Erro ao verificar percentual de pagamento: " . $e->getMessage());
+        return null;
+    }
+}
+
+// Obter informações do usuário
+$user_id = $_SESSION['user_id'];
+$user_query = $conn->prepare("SELECT nome, data_nascimento, rg, cpf, rua, numero, bairro, cidade FROM usuarios WHERE id = ?");
+if (!$user_query) {
+    error_log("Erro na preparação da consulta de usuário: " . $conn->error);
+    // Encerrar a execução com uma mensagem amigável
+    die("Erro ao acessar os dados do usuário. Por favor, entre em contato com o administrador.");
+}
+$user_query->bind_param("i", $user_id);
+if (!$user_query->execute()) {
+    error_log("Erro ao executar a consulta de usuário: " . $user_query->error);
+    die("Erro ao acessar os dados do usuário. Por favor, entre em contato com o administrador.");
+}
+$user_result = $user_query->get_result();
+if (!$user_result) {
+    error_log("Erro ao obter resultados da consulta de usuário: " . $conn->error);
+    die("Erro ao acessar os dados do usuário. Por favor, entre em contato com o administrador.");
+}
+$user = $user_result->fetch_assoc();
+if (!$user) {
+    error_log("Nenhum usuário encontrado com ID: " . $user_id);
+    die("Usuário não encontrado. Por favor, entre em contato com o administrador.");
+}
+
+// Obter informações das reservas do usuário (pendentes ou confirmadas)
+if ($reservas_ids) {
+    // Se IDs de múltiplas reservas foram fornecidos, buscar essas reservas específicas
+    if (!empty($reservas_ids) && is_array($reservas_ids)) {
+        $placeholders = str_repeat('?,', count($reservas_ids) - 1) . '?';
+        $reservas_query = $conn->prepare("SELECT r.id, r.data, r.valor, r.status, r.payment_percentage, r.tipo_porcentagem, r.payment_confirmed_at FROM reservas r WHERE r.user_id = ? AND r.id IN ($placeholders) AND (r.status = 'pendente' OR r.status = 'confirmado') ORDER BY r.data ASC");
+        if ($reservas_query === false) {
+            error_log("DEBUG contrato.php - Erro na preparação da consulta com placeholders: " . $conn->error);
+            $reservas = []; // Garantir que a variável $reservas seja definida
+        } else {
+            $types = 'i' . str_repeat('s', count($reservas_ids));
+            $params = array_merge([$user_id], $reservas_ids);
+            $reservas_query->bind_param($types, ...$params);
+        }
+    } else {
+        // Caso o array esteja vazio, buscar todas as reservas pendentes ou confirmadas
+        $reservas_query = $conn->prepare("SELECT r.id, r.data, r.valor, r.status, r.payment_percentage, r.tipo_porcentagem, r.payment_confirmed_at FROM reservas r WHERE r.user_id = ? AND (r.status = 'pendente' OR r.status = 'confirmado') ORDER BY r.data ASC");
+        $reservas_query->bind_param("i", $user_id);
+    }
+} elseif ($reserva_id_fornecido) {
+    // Se um ID de reserva específico foi fornecido, buscar apenas essa reserva
+    $reservas_query = $conn->prepare("SELECT r.id, r.data, r.valor, r.status, r.payment_percentage, r.tipo_porcentagem, r.payment_confirmed_at FROM reservas r WHERE r.user_id = ? AND r.id = ? AND (r.status = 'pendente' OR r.status = 'confirmado') ORDER BY r.data ASC");
+    $reservas_query->bind_param("is", $user_id, $reserva_id_fornecido);
+} else {
+    // Se nenhum ID específico foi fornecido, buscar todas as reservas pendentes ou confirmadas
+    $reservas_query = $conn->prepare("SELECT r.id, r.data, r.valor, r.status, r.payment_percentage, r.tipo_porcentagem, r.payment_confirmed_at FROM reservas r WHERE r.user_id = ? AND (r.status = 'pendente' OR r.status = 'confirmado') ORDER BY r.data ASC");
+    $reservas_query->bind_param("i", $user_id);
+}
+if (isset($reservas_query) && $reservas_query !== null) {
+    if (!$reservas_query->execute()) {
+        error_log("Erro ao executar a consulta de reservas: " . $reservas_query->error);
+        $reservas = []; // Garantir que a variável $reservas seja definida mesmo em caso de erro
+    } else {
+        $reservas_result = $reservas_query->get_result();
+
+        if (!$reservas_result) {
+            error_log("Erro ao obter resultados da consulta de reservas: " . $conn->error);
+            $reservas = [];
+        } else {
+            $reservas = [];
+            while ($reserva = $reservas_result->fetch_assoc()) {
+                $reservas[] = $reserva;
+            }
+        }
+    }
+} else {
+    // Caso a consulta não tenha sido preparada (por exemplo, devido a erro de placeholders)
+    $reservas = [];
+    error_log("DEBUG contrato.php - Nenhuma consulta de reservas foi preparada, usando array vazio");
+}
+
+// Obter o percentual de pagamento
+$payment_percentage = null;
+if (!empty($reservas)) {
+    $payment_percentage = getPaymentPercentageFromReservations($conn, array_column($reservas, 'id'));
+}
+
+
+// Verificar se o contrato já foi assinado para cada reserva individualmente
+$contrato_assinado = false;
+$reservas_com_contrato_assinado = [];
+
+if (!empty($reservas)) {
+    foreach ($reservas as $reserva) {
+        $assinatura_query = $conn->prepare("SELECT COUNT(*) as total FROM contratos_assinados WHERE user_id = ? AND reserva_id = ?");
+        if (!$assinatura_query) {
+            error_log("Erro na preparação da consulta de assinaturas: " . $conn->error);
+            continue;
+        }
+        $assinatura_query->bind_param("is", $user_id, $reserva['id']);
+        if (!$assinatura_query->execute()) {
+            error_log("Erro ao executar a consulta de assinaturas: " . $assinatura_query->error);
+            continue;
+        }
+        $assinatura_result = $assinatura_query->get_result();
+        if (!$assinatura_result) {
+            error_log("Erro ao obter resultados da consulta de assinaturas: " . $conn->error);
+            continue;
+        }
+        $assinatura = $assinatura_result->fetch_assoc();
+
+        if ($assinatura['total'] > 0) {
+            $reservas_com_contrato_assinado[] = $reserva['id'];
+        }
+    }
+
+    // O contrato está considerado assinado se todas as reservas atuais já foram assinadas
+    $contrato_assinado = count($reservas_com_contrato_assinado) == count($reservas);
+
+    // Calcular o número real de diárias considerando apenas as datas sendo assinadas agora
+    if (count($reservas) > 0) {
+        // O número de diárias para exibir é simplesmente o número de reservas atuais
+        $num_diarias_to_display = count($reservas);
+        // Debug: Remover depois de testar
+        error_log("DEBUG contrato.php - Número de reservas: " . count($reservas) . " - IDs: " . json_encode(array_column($reservas, 'id')));
+        error_log("DEBUG contrato.php - Reservas com contrato assinado: " . json_encode($reservas_com_contrato_assinado));
+    } else {
+        $num_diarias_to_display = 0;
+    }
+} else {
+    $num_diarias_to_display = 0;
+}
+
+// Obter informações da tabela descricao_contrato
+$descricao_query = $conn->prepare("SELECT descricao, qtd, valor_unitario, valor_total FROM descricao_contrato");
+if (!$descricao_query) {
+    error_log("Erro na preparação da consulta de descrição do contrato: " . $conn->error);
+    $descricao_itens = [];
+} else {
+    if (!$descricao_query->execute()) {
+        error_log("Erro ao executar a consulta de descrição do contrato: " . $descricao_query->error);
+        $descricao_itens = [];
+    } else {
+        $descricao_result = $descricao_query->get_result();
+        if (!$descricao_result) {
+            error_log("Erro ao obter resultados da consulta de descrição do contrato: " . $conn->error);
+            $descricao_itens = [];
+        } else {
+            $descricao_itens = [];
+            while ($item = $descricao_result->fetch_assoc()) {
+                $descricao_itens[] = $item;
+            }
+        }
+    }
+}
+
+$conn->close();
+
+// Debug output to see if PHP processing completed
+error_log("CONTRATO.PHP - Database connection closed, PHP processing completed");
+
+// Debug: adicionar informações para ajudar na depuração
+error_log("DEBUG contrato.php - user_id: " . $user_id);
+error_log("DEBUG contrato.php - reserva_id_fornecido: " . ($reserva_id_fornecido ?: 'null'));
+error_log("DEBUG contrato.php - reservas_ids: " . ($reservas_ids ? json_encode($reservas_ids) : 'null'));
+error_log("DEBUG contrato.php - número de reservas encontradas: " . count($reservas));
+error_log("DEBUG contrato.php - contrato_assinado: " . ($contrato_assinado ? 'true' : 'false'));
+error_log("DEBUG contrato.php - payment_percentage: " . ($payment_percentage !== null ? $payment_percentage : 'null'));
+error_log("DEBUG contrato.php - num_diarias_to_display: " . $num_diarias_to_display);
+
+// Debug: verificar se há erros antes de começar a renderizar o HTML
+if (isset($num_diarias_to_display)) {
+    // Tudo OK
+} else {
+    $num_diarias_to_display = count($reservas); // Valor padrão
+    error_log("DEBUG contrato.php - num_diarias_to_display definido como padrão: " . $num_diarias_to_display);
+}
+?>
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Contrato de Locação - Chácara Recanto do Sossego</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+
+    <!-- Bootstrap CSS - using consistent framework -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    
+    <style>
+        body {
+            background-color: #f6f6f6; /* Cor de fundo conforme solicitado */
+            font-family: Arial, sans-serif;
+        }
+
+        /* Estilo de reset para o conteúdo do contrato */
+        .contract-content * {
+            box-sizing: border-box !important;
+        }
+
+        /* Estilo para aparência de documento similar ao recibos.php */
+        .receipt-content {
+            font-family: Arial, sans-serif;
+            font-size: 9px;
+            line-height: 1.3;
+            padding: 10px 10px 10px 10px;
+            background-color: #ffffff;
+            max-width: 210mm;
+            min-height: 297mm;
+            margin: 0 auto;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+
+        .page-top-padding {
+            height: 10mm;
+            display: block;
+        }
+
+        .receipt-title {
+            text-align: center;
+            font-weight: bold;
+            margin-top: 5px;
+            margin-bottom: 8px;
+            font-size: 11px;
+            color: #2c3e50;
+            border-bottom: 1px solid #3498db;
+            padding-bottom: 5px;
+        }
+
+        .receipt-section {
+            margin-bottom: 8px;
+            padding: 4px 0;
+        }
+
+        .receipt-data {
+            margin: 6px 0;
+            padding: 5px;
+            background-color: #f8f9fa;
+            border-left: 3px solid #3498db;
+            border-radius: 0 3px 3px 0;
+        }
+
+        .logo-section {
+            text-align: center;
+            margin-bottom: 6px;
+        }
+
+        .logo-section img {
+            max-width: 100px;
+            height: auto;
+            display: block;
+            margin: 0 auto 10px auto;
+        }
+
+        .company-info {
+            text-align: center;
+            margin: 8px 0;
+        }
+
+        .signature-section {
+            margin-top: 15px;
+            text-align: center;
+        }
+
+        .signature-line {
+            display: block;
+            text-align: center;
+            margin-top: 10px;
+        }
+
+        .signature-line div {
+            text-align: center;
+        }
+
+        .signature-item {
+            text-align: center;
+            display: block;
+        }
+
+        .signature-label {
+            font-weight: bold;
+            margin-bottom: 2px;
+            white-space: nowrap;
+            padding-top: 15px;
+            border-top: 1px solid #ccc;
+            font-size: 9px;
+        }
+
+        .signature-name {
+            margin-top: 3px;
+            font-weight: normal;
+            font-size: 9px;
+        }
+
+        .receipt-details {
+            margin: 10px 0;
+            padding: 8px;
+            background-color: #f0f8ff;
+            border: 1px solid #b0c4de;
+            border-radius: 3px;
+        }
+
+        .receipt-field {
+            margin: 4px 0;
+        }
+
+        .receipt-field-label {
+            font-weight: bold;
+            display: inline-block;
+            width: 100px;
+        }
+
+        .receipt-field-value {
+            display: inline-block;
+        }
+
+        /* Estilo altamente específico para garantir que prevaleça sobre frameworks */
+        #contratoPageCliente main.container div div.contract-content,
+        #contratoPageCliente .contract-content,
+        .contract-content.ui-body.ui-body-c,
+        .contract-content {
+            font-family: Arial, serif !important;
+            font-size: 9px !important;
+            line-height: 1.3 !important;
+            padding: 10px !important;
+            background-color: #ffffff !important;
+            width: 210mm !important;
+            min-height: 297mm !important;
+            margin: 0 auto !important;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1) !important;
+            border-radius: 0 !important;
+            border: none !important;
+            position: relative !important;
+            counter-reset: clause-counter !important;
+            max-width: 210mm !important;
+            left: auto !important;
+            right: auto !important;
+            float: none !important;
+            display: block !important;
+        }
+
+        /* Estilo para aparência de documento oficial */
+        .document-header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #333;
+        }
+
+        .document-footer {
+            position: absolute;
+            bottom: 20px;
+            left: 40px;
+            right: 40px;
+            text-align: center;
+            padding-top: 15px;
+            border-top: 1px solid #ccc;
+            font-size: 12px;
+            color: #666;
+        }
+
+        .page-number {
+            position: absolute;
+            bottom: 30px;
+            right: 40px;
+            font-size: 12px;
+            color: #666;
+        }
+
+        /* Botão de impressão */
+        .print-button {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .print-button:hover {
+            background-color: #0056b3;
+        }
+
+        @media print {
+            body {
+                background-color: white;
+            }
+
+            /* Estilo específico para impressão */
+            #contratoPageCliente main.container div div.contract-content,
+            #contratoPageCliente .contract-content,
+            .contract-content.ui-body.ui-body-c,
+            .contract-content {
+                box-shadow: none !important;
+                border: none !important;
+                margin: 0 !important;
+                padding: 10px !important;
+                max-width: 100% !important;
+                min-height: 100vh !important;
+                width: 210mm !important;
+                height: auto !important;
+            }
+
+            .print-button {
+                display: none;
+            }
+
+            .ui-header, .ui-footer {
+                display: none;
+            }
+
+            .signature-section {
+                page-break-inside: avoid;
+            }
+
+            .contract-clause {
+                page-break-inside: avoid;
+            }
+        }
+
+        /* Ensure all content is visible */
+        .contract-clause, .contract-section, .signature-section {
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+        }
+
+        /* Override any conflicting styles */
+        #contratoPageCliente .contract-title,
+        .contract-title,
+        .contract-section,
+        .contract-clause {
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            position: static !important;
+            left: auto !important;
+            top: auto !important;
+            z-index: auto !important;
+        }
+
+        /* Estilo adicional para garantir visibilidade - agora com menor especificidade */
+        #contratoPageCliente .contract-content,
+        .contract-content {
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            /* position: relative já está definido acima com alta especificidade */
+            left: auto !important;
+            top: auto !important;
+            z-index: auto !important;
+        }
+        
+        .contract-title {
+            text-align: center;
+            font-weight: bold;
+            margin: 0 0 30px 0;
+            font-size: 20px;
+            color: #2c3e50;
+            border-bottom: 3px solid #2c3e50;
+            padding-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .contract-section {
+            margin-bottom: 20px;
+            padding: 10px 0;
+            line-height: 1.6;
+        }
+
+        .contract-clause {
+            margin-bottom: 25px;
+            padding: 15px;
+            background-color: #ffffff;
+            border: 1px solid #ddd;
+            border-radius: 0;
+            position: relative;
+        }
+
+        .contract-clause:before {
+            counter-increment: clause-counter;
+            content: counter(clause-counter) ". ";
+            font-weight: bold;
+            position: absolute;
+            left: -20px;
+            top: 0;
+            background: #2c3e50;
+            color: white;
+            width: 25px;
+            height: 25px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+        }
+
+        .contract-clause strong {
+            color: #2c3e50;
+            font-weight: bold;
+        }
+
+        /* Estilo para cláusulas numeradas */
+        .contract-clause-numbered {
+            counter-increment: clause-counter;
+            position: relative;
+        }
+
+        .contract-clause-numbered:before {
+            content: counter(clause-counter) ". ";
+            font-weight: bold;
+            position: absolute;
+            left: -25px;
+            top: 0;
+            background: #2c3e50;
+            color: white;
+            width: 25px;
+            height: 25px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+        }
+        
+        .signature-section {
+            margin-top: 60px;
+            text-align: center;
+            padding-top: 30px;
+            border-top: 1px solid #ccc;
+        }
+
+        .signature-line {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 80px;
+            gap: 20px;
+        }
+
+        .signature-line div {
+            flex: 1;
+            text-align: center;
+        }
+
+        .signature-item {
+            text-align: center;
+            min-width: 40%;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+        }
+
+        .signature-label {
+            font-weight: bold;
+            margin-bottom: 5px;
+            white-space: nowrap;
+            padding-top: 5px;
+            font-size: 14px;
+        }
+
+        .signature-name {
+            margin-top: 30px;
+            font-weight: normal;
+            padding-top: 2px;
+            border-top: 1px solid #000;
+            width: 80%;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .signature-section-content {
+            position: relative;
+        }
+
+        /* Estilo para parágrafos do contrato */
+        .contract-paragraph {
+            text-align: justify;
+            text-indent: 30px;
+            margin-bottom: 15px;
+            line-height: 1.6;
+        }
+
+        /* Estilo para destaques no contrato */
+        .contract-highlight {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-left: 3px solid #007bff;
+            margin: 15px 0;
+        }
+        
+        .contract-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .contract-table th, .contract-table td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: left;
+        }
+        
+        .contract-table th {
+            background-color: #3498db;
+            color: white;
+            font-weight: bold;
+        }
+        
+        .contract-table tr:nth-child(even) {
+            background-color: #f2f2f2;
+        }
+        
+        .contract-table tr:hover {
+            background-color: #e8f4fc;
+        }
+        
+        .contract-table th:nth-child(2),
+        .contract-table td:nth-child(2) {
+            text-align: center;
+            width: 80px;
+        }
+        
+        .contract-table th:nth-child(3),
+        .contract-table td:nth-child(3),
+        .contract-table th:nth-child(4),
+        .contract-table td:nth-child(4) {
+            text-align: right;
+            width: 120px;
+        }
+        
+        .logo-section {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .custom-checkbox {
+            margin-right: 12px;
+        }
+        
+        @media print {
+            body, html {
+                background-color: white;
+                margin: 0;
+                padding: 0;
+            }
+            .contract-content {
+                box-shadow: none;
+                padding: 15mm;
+                border: none;
+                max-width: 100%;
+                width: 100%;
+                margin: 0;
+            }
+            .ui-header {
+                display: none;
+            }
+            .ui-footer {
+                display: none;
+            }
+        }
+        
+        /* Responsive design for mobile devices */
+        @media (max-width: 768px) {
+            .contract-content {
+                padding: 15px;
+                margin: 10px;
+                font-size: 12px;
+            }
+            
+            .signature-line {
+                flex-direction: column;
+                gap: 30px;
+            }
+            
+            .contract-table {
+                display: block;
+                overflow-x: auto;
+            }
+            
+            .contract-title {
+                font-size: 16px;
+            }
+            
+            .contract-clause {
+                padding: 8px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .contract-content {
+                padding: 10px;
+                margin: 5px;
+                font-size: 11px;
+            }
+            
+            .contract-title {
+                font-size: 14px;
+            }
+            
+            .signature-label {
+                font-size: 10px;
+            }
+        }
+        
+        .ui-page {
+            margin: 0 auto;
+        }
+        
+        .ui-content {
+            padding: 0;
+            background-color: #f6f6f6;
+        }
+        
+        #contratoPageCliente {
+            background-color: #f6f6f6;
+        }
+        
+        .contract-title {
+            text-align: center;
+            font-weight: bold;
+            margin-bottom: 20px;
+            font-size: 18px;
+        }
+        
+        .contract-section {
+            margin-bottom: 15px;
+        }
+        
+        .contract-clause {
+            margin-bottom: 10px;
+        }
+        
+        .signature-section {
+            margin-top: 40px;
+            text-align: center;
+        }
+        
+        .signature-line {
+            margin: 40px 0;
+            text-align: center;
+        }
+        
+        .signature-line {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 60px;
+            gap: 20px;
+        }
+        
+        .signature-line div {
+            flex: 1;
+            text-align: center;
+        }
+        
+        .contract-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        
+        .contract-table th, .contract-table td {
+            border: 1px solid #000;
+            padding: 8px;
+            text-align: left;
+        }
+        
+        .contract-table th {
+            background-color: #f2f2f2;
+        }
+        
+        .contract-table th:nth-child(2),
+        .contract-table td:nth-child(2) {
+            text-align: center;
+            width: 80px;
+        }
+        
+        .contract-table th:nth-child(3),
+        .contract-table td:nth-child(3),
+        .contract-table th:nth-child(4),
+        .contract-table td:nth-child(4) {
+            text-align: right;
+            width: 120px;
+        }
+        
+        .logo-section {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .logo-placeholder {
+            width: 150px;
+            height: 100px;
+            background-color: #f0f0f0;
+            margin: 0 auto 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px dashed #ccc;
+        }
+        
+        .custom-checkbox {
+            margin-right: 12px;
+        }
+        
+
+        
+
+        
+        .signature-item {
+            text-align: center;
+            min-width: 40%;
+            flex: 1;
+        }
+        
+        .signature-label {
+            font-weight: bold;
+            margin-bottom: 5px;
+            white-space: nowrap;
+        }
+        
+        .signature-name {
+            margin-top: 10px;
+            font-weight: normal;
+        }
+
+        .signature-section-content {
+            position: relative;
+        }
+
+        /* Estilos responsivos para o cabeçalho com nome do usuário */
+        .ui-header h1 {
+            font-size: 1.25em !important;
+            margin: 0.4em 0 !important;
+        }
+
+        .ui-header .ui-btn {
+            font-size: 0.85em !important;
+            padding: 0.4em 0.7em !important;
+        }
+
+        @media (max-width: 768px) {
+            .ui-header h1 {
+                font-size: 1.1em !important;
+                margin: 0.35em 0 !important;
+            }
+
+            .ui-header .ui-btn {
+                font-size: 0.8em !important;
+                padding: 0.35em 0.6em !important;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .ui-header h1 {
+                font-size: 1em !important;
+                margin: 0.3em 0 !important;
+            }
+
+            .ui-header .ui-btn {
+                font-size: 0.75em !important;
+                padding: 0.3em 0.5em !important;
+            }
+        }
+
+        @media (max-width: 400px) {
+            .ui-header h1 {
+                font-size: 0.95em !important;
+                margin: 0.25em 0 !important;
+            }
+
+            .ui-header .ui-btn {
+                font-size: 0.7em !important;
+                padding: 0.25em 0.45em !important;
+            }
+        }
+
+        @media (max-width: 350px) {
+            .ui-header h1 {
+                font-size: 0.9em !important;
+                margin: 0.2em 0 !important;
+            }
+
+            .ui-header .ui-btn {
+                font-size: 0.65em !important;
+                padding: 0.2em 0.4em !important;
+            }
+        }
+
+        @media (max-width: 300px) and (max-height: 660px) {
+            .ui-header h1 {
+                font-size: 0.85em !important;
+                margin: 0.15em 0 !important;
+            }
+
+            .ui-header .ui-btn {
+                font-size: 0.6em !important;
+                padding: 0.15em 0.35em !important;
+            }
+        }
+</head>
+<body>
+
+<div id="contratoPageCliente" class="container-fluid">
+    <header class="bg-white text-dark py-3">
+        <div class="container">
+            <div class="d-flex justify-content-between align-items-center">
+                <h1 class="h5 mb-0" id="header-title-contrato">Contrato de Locação</h1>
+                <a href="#" id="logout-link-contrato" class="btn btn-light btn-sm">Sair</a>
+            </div>
+        </div>
+    </header>
+
+    <main id="main-contract-area" class="container" style="padding-top: 30px; padding-bottom: 80px; display: block !important; visibility: visible !important; opacity: 1 !important;">
+        <div style="background-color: #f6f6f6; padding: 15px 0; display: block !important; visibility: visible !important; opacity: 1 !important;">
+            <div class="contract-content ui-body ui-body-c">
+
+                <!-- Botão de impressão -->
+                <button class="print-button" onclick="window.print();">
+                    <i class="fas fa-print"></i> Imprimir Contrato
+                </button>
+
+                <div style="background-color: #ffffff; padding: 5px 0;">
+                    <div class="receipt-content" style="margin-top: 2px;">
+                        <div class="page-top-padding"></div>
+
+                        <table style="width: 100%; border: none; border-collapse: collapse;">
+                            <tr>
+                                <td style="text-align: center; padding: 0;">
+                                    <p style="font-weight: bold; margin: 0; font-size: 25px; line-height: 1.1; text-align: center !important; display: block;">Chácara Recanto do Sossego</p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="text-align: center; padding: 0;">
+                                    <p style="margin: 1px 0 0 0; font-size: 8px; line-height: 1.1; text-align: center !important; display: block;">BR 401, km12, lote 03, vicinal Igarapé Azul</p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="text-align: center; padding: 0;">
+                                    <p style="margin: 1px 0 0 0; font-size: 8px; line-height: 1.1; text-align: center !important; display: block;">Cidade de Santa Cecília, Boa Vista – RR (95) 99124-4142</p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td style="text-align: center; padding: 8px 0 5px 0;">
+                                    <div class="receipt-title" style="text-align: center !important; margin: 0; padding: 0; line-height: 1.1; font-size: 15px; display: block;">
+                                        CONTRATO DE LOCAÇÃO TEMPORÁRIA
+                                    </div>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <!-- DEBUG: Contract content start -->
+                        <div style="background-color: yellow; color: black; padding: 10px; text-align: center; font-weight: bold; z-index: 9999; position: relative; border: 2px solid red;">
+                            DEBUG: Contract content is loading - <?php echo date('Y-m-d H:i:s'); ?>
+                            <?php if(empty($reservas)): ?>
+                            <br><span style="color: red;">ATENÇÃO: Nenhuma reserva encontrada para exibir o contrato!</span>
+                            <?php else: ?>
+                            <br><span style="color: green;">SUCESSO: <?php echo count($reservas); ?> reserva(s) encontrada(s) para exibir o contrato!</span>
+                            <?php endif; ?>
+                        </div>
+
+                        <!-- Additional debug to ensure visibility -->
+                        <div id="debug-contract-visibility" style="position: fixed; top: 10px; left: 10px; background: red; color: white; padding: 10px; z-index: 9999; font-weight: bold;">
+                            DEBUG: Contract Page Loaded - Reservas: <?php echo count($reservas); ?>
+                        </div>
+
+                        <!-- Force visibility override -->
+                        <div id="force-visibility-check" style="display: block !important; visibility: visible !important; opacity: 1 !important; height: auto !important; width: 100% !important;">
+                            <noscript>
+                                <style>
+                                    .contract-content, .contract-section, .contract-clause {
+                                        display: block !important;
+                                        visibility: visible !important;
+                                        opacity: 1 !important;
+                                    }
+                                </style>
+                            </noscript>
+                        </div>
+
+                        <div class="receipt-section">
+                            <div style="text-align: right; font-size: 10px;">
+                                Boa Vista RR, <?php echo date('d') . ' de ' . getMesExtenso(date('m')) . ' de ' . date('Y'); ?>
+                            </div>
+
+                            <div class="receipt-data">
+                                <div class="receipt-details">
+                                    <div class="receipt-field">
+                                        <span class="receipt-field-label"><strong>IMÓVEL:</strong></span>
+                                        <span class="receipt-field-value">Chácara Recanto do sossego; localizada na BR 401, km12, lote 03, vicinal Igarapé Azul, Cidade de Santa Cecília, Boa Vista – RR.</span>
+                                    </div>
+
+                                    <div class="receipt-field">
+                                        <span class="receipt-field-label"><strong>LOCADOR:</strong></span>
+                                        <span class="receipt-field-value">Kelmy Araújo Vasconcelos, Brasileiro, Casado, portador do CPF 00194282198, RG 1329705-8 SSP/MT, simplesmente denominado "LOCADOR"</span>
+                                    </div>
+
+                                    <div class="receipt-field">
+                                        <span class="receipt-field-label"><strong>LOCATÁRIO(A):</strong></span>
+                                        <span class="receipt-field-value"><?php echo $user['nome']; ?></span>
+                                    </div>
+
+                                    <div class="receipt-field">
+                                        <span class="receipt-field-label"><strong>Data Nascimento:</strong></span>
+                                        <span class="receipt-field-value"><?php echo date('d/m/Y', strtotime($user['data_nascimento'])); ?></span>
+                                    </div>
+
+                                    <div class="receipt-field">
+                                        <span class="receipt-field-label"><strong>RG:</strong></span>
+                                        <span class="receipt-field-value"><?php echo $user['rg']; ?></span>
+                                    </div>
+
+                                    <div class="receipt-field">
+                                        <span class="receipt-field-label"><strong>CPF:</strong></span>
+                                        <span class="receipt-field-value"><?php echo $user['cpf']; ?></span>
+                                    </div>
+
+                                    <div class="receipt-field">
+                                        <span class="receipt-field-label"><strong>Endereço:</strong></span>
+                                        <span class="receipt-field-value"><?php echo $user['rua']; ?>, <?php echo $user['numero']; ?>, <?php echo $user['bairro']; ?>, <?php echo $user['cidade']; ?></span>
+                                    </div>
+                                </div>
+
+                                <div class="receipt-description" style="margin-top: 8px;">
+                                    <p>As partes, acima qualificadas, ajustam a locação por temporada da chácara objeto do presente contrato mediante as cláusulas e condições seguintes:</p>
+                                </div>
+                            </div>
+                
+                <?php if(count($reservas) > 0): ?>
+                <?php
+                // Calcular horas totais com base nas reservas atuais, sem considerar antigas
+                $total_horas = 0;
+                $data_inicio = null;
+                $data_fim = null;
+
+                // Separar apenas as reservas atuais (não as antigas que já foram)
+                $reservas_atuais = $reservas;  // Neste contexto, $reservas contém apenas as selecionadas para assinatura
+
+                if (count($reservas_atuais) == 1) {
+                    // Para uma única reserva, calcular duração individual
+                    $data_inicio = $reservas_atuais[0]['data'];
+                    $data_fim = date('Y-m-d', strtotime($data_inicio . ' +1 day'));
+                    $total_horas = 23; // Uma diária = 23 horas (09:00 do dia até 08:00 do dia seguinte)
+                } else {
+                    // Para múltiplas reservas, calcular duração total apenas das atuais selecionadas
+                    $current_reservation_dates = array_map(function($reserva) {
+                        return new DateTime($reserva['data']);
+                    }, $reservas_atuais);
+
+                    // Apenas datas atuais, ordenar e usar
+                    usort($current_reservation_dates, function($a, $b) {
+                        return $a->getTimestamp() - $b->getTimestamp();
+                    });
+                    $first_date = $current_reservation_dates[0];
+                    $last_date = end($current_reservation_dates);
+
+                    $data_inicio = $first_date->format('Y-m-d');
+                    $data_fim = date('Y-m-d', strtotime($last_date->format('Y-m-d') . ' +1 day'));
+
+                    // Calcular horas totais: (24 horas * número total de diárias) - 1
+                    $total_horas = (24 * count($reservas_atuais)) - 1;
+                }
+                ?>
+                                <div class="receipt-data">
+                                    <div class="receipt-details">
+                                        <div class="receipt-field">
+                                            <span class="receipt-field-label"><strong>CLÁUSULA PRIMEIRA:</strong></span>
+                                            <span class="receipt-field-value">
+                                                <?php
+                                                // Calcular as horas com base no número total de diárias atuais
+                                                if (count($reservas_atuais) > 1) {
+                                                    $horas_calculadas = (24 * count($reservas_atuais)) - 1;
+                                                    echo "O prazo de locação de temporada será de $horas_calculadas (".numero_extenso($horas_calculadas).") horas a partir das 09:00 horas do dia ".date('d/m/Y', strtotime($data_inicio)).", terminando às 08:00 horas do dia ".date('d/m/Y', strtotime($data_fim)).", data em que locatário se obriga a restituir a chácara locada, completamente desocupado e nas condições de entrada;";
+                                                } else {
+                                                    $reserva = $reservas_atuais[0]; // Usar a reserva atual para mostrar informação individual
+                                                    echo "O prazo de locação de temporada será de 23 (vinte e três) horas a partir das 09:00 horas do dia ".date('d/m/Y', strtotime($reserva['data'])).", terminando às 08:00 horas do dia ".date('d/m/Y', strtotime($reserva['data'] . ' +1 day')).", data em que locatário se obriga a restituir a chácara locada, completamente desocupado e nas condições de entrada;";
+                                                }
+                                                ?>
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="receipt-data">
+                                    <div class="receipt-details">
+                                        <div class="receipt-field">
+                                            <span class="receipt-field-label"><strong>CLÁUSULA SEGUNDA:</strong></span>
+                                            <span class="receipt-field-value">
+                                                <?php
+                                                // Informações de pagamento e valor total para as reservas atuais
+                                                $total_valor = array_sum(array_column($reservas_atuais, 'valor'));
+
+                                                // Determinar o texto baseado no tipo_porcentagem
+                                                // Verificar se todas as reservas têm o mesmo tipo_porcentagem
+                                                $tipo_porcentagens = array_unique(array_column($reservas_atuais, 'tipo_porcentagem'));
+
+                                                // Using the payment_percentage from our function instead of tipo_porcentagem
+                                                if ($payment_percentage !== null) {
+                                                    // Calcular o valor pago com base no percentual
+                                                    $valor_pago = $total_valor * ($payment_percentage / 100);
+
+                                                    if ($payment_percentage == 50) {
+                                                        // 50% payment: texto modificado conforme requisitos
+                                                        $valor_extenso = numero_extenso(intval($total_valor));
+                                                        $valor_pago_extenso = numero_extenso(intval($valor_pago));
+                                                        $cents_part = substr(number_format($valor_pago, 2, ',', '.'), -2);
+                                                        echo "O aluguel da temporada corresponde a ".count($reservas_atuais)." diária".(count($reservas_atuais) > 1 ? 's' : '')." totalizando o valor de R$".number_format($total_valor, 2, ',', '.')." (".$valor_extenso." reais). Foi pago 50% (".getPorcentagemExtenso(50).") do valor de sinal referente ao valor de R$ ".number_format($valor_pago, 2, ',', '.')." (".ucfirst($valor_pago_extenso)." reais e ".$cents_part." centavos) para contratação da(s) data(s) estipulada(s) na assinatura do contrato. E os outros 50% (".getPorcentagemExtenso(50).") 01 (um) dia antes da data de entrada, totalizando assim a reserva efetivada;";
+                                                        if(count($reservas_atuais) > 1):
+                                                        echo " Caso o cliente selecione mais de um dia, estes serão especificados como dias únicos ou consecutivos de acordo com a escolha do cliente.";
+                                                        endif;
+                                                        echo " Caso o cliente escolha o pagamento ser 100% do valor, a porcentagem será alterada para refletir o pagamento total das diárias selecionadas.";
+                                                    } elseif ($payment_percentage == 100) {
+                                                        // 100% payment: texto modificado conforme requisitos
+                                                        $valor_extenso = numero_extenso(intval($total_valor));
+                                                        echo "O aluguel da temporada corresponde a ".count($reservas_atuais)." diária".(count($reservas_atuais) > 1 ? 's' : '')." totalizando R$".number_format($total_valor, 2, ',', '.')." (".$valor_extenso." reais), totalizando assim a reserva efetivada com os dias selecionados.";
+                                                    } else {
+                                                        // Outro percentual
+                                                        $valor_extenso = numero_extenso(intval($total_valor));
+                                                        echo "O aluguel da temporada corresponde a ".count($reservas_atuais)." diária".(count($reservas_atuais) > 1 ? 's' : '')." totalizando R$".number_format($total_valor, 2, ',', '.')." (".$valor_extenso." reais). E será pago ".$payment_percentage."% (".getPorcentagemExtenso($payment_percentage).") do valor de sinal para contratação da data estipulada na assinatura do contrato e os outros ".(100-$payment_percentage)."% (".getPorcentagemExtenso(100-$payment_percentage).") 1 (um) dia antes da data de entrada, totalizando assim a reserva efetivada;";
+                                                        if(count($reservas_atuais) > 1):
+                                                        echo " Caso o cliente selecione mais de um dia, estes serão especificados como dias únicos ou consecutivos de acordo com a escolha do cliente.";
+                                                        endif;
+                                                        echo " Caso o cliente escolha o pagamento ser 100% do valor, a porcentagem será alterada para refletir o pagamento total das diárias selecionadas.";
+                                                    }
+                                                } else {
+                                                    // Sem percentual de pagamento encontrado, manter o texto original baseado em tipo_porcentagem
+                                                    // Assuming all reservations in the contract have the same tipo_porcentagem
+                                                    $tipo_porcentagem_atual = !empty($tipo_porcentagens) ? $tipo_porcentagens[0] : '50';
+
+                                                    if ($tipo_porcentagem_atual == '100') {
+                                                        // 100% payment: texto mais curto e direto
+                                                        $valor_extenso = numero_extenso(intval($total_valor));
+                                                        echo "O aluguel da temporada corresponde a ".count($reservas_atuais)." diária".(count($reservas_atuais) > 1 ? 's' : '')." totalizando R$".number_format($total_valor, 2, ',', '.')." (".$valor_extenso." reais), totalizando assim a reserva efetivada com os dias selecionados.";
+                                                    } else {
+                                                        // 50% payment or other: texto padrão com detalhes de pagamento
+                                                        $valor_extenso = numero_extenso(intval($total_valor));
+                                                        echo "O aluguel da temporada corresponde a ".count($reservas_atuais)." diária".(count($reservas_atuais) > 1 ? 's' : '')." totalizando R$".number_format($total_valor, 2, ',', '.')." (".$valor_extenso." reais). E será pago 50% do valor de sinal para contratação da data estipulada na assinatura do contrato e os outros 50% 1 (um) dia antes da data de entrada, totalizando assim a reserva efetivada;";
+                                                        if(count($reservas_atuais) > 1):
+                                                        echo " Caso o cliente selecione mais de um dia, estes serão especificados como dias únicos ou consecutivos de acordo com a escolha do cliente.";
+                                                        endif;
+                                                        echo " Caso o cliente escolha o pagamento ser 100% do valor, a porcentagem será alterada para refletir o pagamento total das diárias selecionadas.";
+                                                    }
+                                                }
+                                                ?>
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Valor total das reservas atuais após a segunda cláusula -->
+                                <div class="receipt-data" style="font-weight: bold; text-align: center; margin: 15px 0; padding: 10px; background-color: #f0f0f0; border: 1px solid #ccc;">
+                                    <?php if ($payment_percentage !== null): ?>
+                                        <?php if ($payment_percentage == 50): ?>
+                                            <?php
+                                            $valor_pago_50 = array_sum(array_column($reservas_atuais, 'valor')) * 0.5;
+                                            ?>
+                                            <p>Forma de Pagamento: 50% (<?php echo getPorcentagemExtenso(50); ?>) de entrada.</p>
+                                            <p>Valor pago: R$ <?php echo number_format($valor_pago_50, 2, ',', '.'); ?> (<?php echo ucfirst(numero_extenso(intval($valor_pago_50))); ?> reais).</p>
+                                        <?php elseif ($payment_percentage == 100): ?>
+                                            <?php
+                                            $valor_pago_100 = array_sum(array_column($reservas_atuais, 'valor'));
+                                            ?>
+                                            <p>Forma de Pagamento: 100% (<?php echo getPorcentagemExtenso(100); ?>).</p>
+                                            <p>Valor pago: R$ <?php echo number_format($valor_pago_100, 2, ',', '.'); ?> (<?php echo ucfirst(numero_extenso(intval($valor_pago_100))); ?> reais).</p>
+                                        <?php else: ?>
+                                            <?php
+                                            $valor_pago_outro = array_sum(array_column($reservas_atuais, 'valor')) * ($payment_percentage / 100);
+                                            ?>
+                                            <p>Forma de Pagamento: <?php echo $payment_percentage; ?>% (<?php echo getPorcentagemExtenso($payment_percentage); ?>) de entrada.</p>
+                                            <p>Valor pago: R$ <?php echo number_format($valor_pago_outro, 2, ',', '.'); ?> (<?php echo ucfirst(numero_extenso(intval($valor_pago_outro))); ?> reais).</p>
+                                        <?php endif; ?>
+                                    <?php endif; ?>
+                                    <p>Valor Total das Reservas Atuais: R$<?php echo number_format(array_sum(array_column($reservas_atuais, 'valor')), 2, ',', '.'); ?> (<?php echo numero_extenso(intval(array_sum(array_column($reservas_atuais, 'valor')))); ?> reais)</p>
+                                </div>
+
+                <?php else: ?>
+                                <div class="receipt-data">
+                                    <div class="receipt-details">
+                                        <div class="receipt-field">
+                                            <span class="receipt-field-label"><strong>CLÁUSULA PRIMEIRA:</strong></span>
+                                            <span class="receipt-field-value">Nenhuma reserva encontrada. Para visualizar o contrato, você precisa ter pelo menos uma reserva pendente ou confirmada.</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Valor total das reservas quando não há reservas -->
+                                <div class="receipt-data" style="font-weight: bold; text-align: center; margin: 15px 0; padding: 10px; background-color: #f0f0f0; border: 1px solid #ccc;">
+                                    <p>Valor Total das Reservas: R$0,00 (zero reais)</p>
+                                </div>
+
+                <?php endif; ?>
+
+                <!-- Exibir as demais cláusulas do contrato mesmo quando não há reservas -->
+                <div class="receipt-description" style="margin-top: 8px;">
+                    <p><strong>CLÁUSULA TERCEIRA:</strong> A diária estabelecida é para o número máximo de 200 (duzentas) pessoas, não podendo esse limite ser ultrapassado. O descumprimento de qualquer das cláusulas
+                    do presente contrato, ensejará a sua rescisão,
+                    perdendo o locatário todas as diárias pagas.</p>
+
+                    <p><strong>CLÁUSULA QUARTA:</strong> Não é permitida qualquer alteração ou modificação nas disposições do imóvel, que deverá devolver ao locador no perfeito estado em que foi encontrado. O(A)
+                    LOCADOR(A) não se responsabiliza pelo extravio ou danos a quaisquer objetos deixados pelo(a) LOCATÁRIO(A) nas dependências e imediações do da chácara
+                    locado, antes, durante e após o evento.</p>
+
+                    <p><strong>CLÁUSULA QUINTA:</strong> O locatário, assim que ingressar no sítio receberá uma relação de todos os objetos encontrados no mesmo, e de posse desse inventário, conferirá todos os bens
+                    junto com o locador e, estando de acordo o assinará, ficando com uma cópia, responsabilizando-se totalmente por qualquer dano que venha por ventura a causar.</p>
+
+                    <p><strong>CLÁUSULA SEXTA:</strong> O locatário, desde já, faculta ao locador examinar o imóvel locado, quando este achar necessário;</p>
+
+                    <p><strong>CLÁUSULA SETIMA:</strong> Em caso de desistência da presente locação de temporada pelo locatário, perderá este todas as diárias pagas;</p>
+
+                    <p><strong>CLÁUSULA OITAVA:</strong> No último dia da temporada, o locador fará a vistoria no imóvel juntamente com o locatário, quando deverão ser devolvidas as chaves;</p>
+
+                    <p><strong>CLÁUSULA NONA:</strong> O locatário receberá uma cópia do regulamento interno contendo as normas e
+                    orientações do sítio que, uma vez de pleno acordo, deverá ser assinado e faz parte integrante deste contrato, no ambiente interno da chácara há vários avisos de
+                    permissões e proibições sendo obrigatório o LOCATÁRIO(A) atentar-se e fazer ser respeitados;</p>
+
+                    <p><strong>CLÁUSULA DÉCIMA:</strong> As partes contratantes exigirão reciprocamente recibos protocolados ou termos de recebimento e entrega, pois todo e qualquer tipo de prova far-se-á por meio de,
+                    apenas, de prova documental;</p>
+
+                    <p><strong>CLÁUSULA DÉCIMA PRIMEIRA:</strong> O locatário responderá por qualquer dano ao imóvel, se não provar caso fortuito, força
+                    maior ou propagação do imóvel, de conformidade com artigo 1.208 e seu parágrafo único do Código Civil. No caso de incêndio do imóvel locado, ficará o presente
+                    contrato rescindido de pleno direito, independente de notificação.</p>
+
+                    <p><strong>CLÁUSULA DÉCIMA SEGUNDA:</strong> Caso locatário não desocupe o imóvel no dia estipulado no contrato, estará obrigado a pagar as horas que excederem ao dia e horário fixado a sua saída, no valor
+                    de R$150,00 a hora; todos os outros gastos que se fizerem necessários com relação à acomodação das pessoas que ocupariam o imóvel, mas foram impedidas de
+                    faze-lo devido a sua permanência abusiva no mesmo, e se necessário ainda recorrer ao Poder Judiciário para que assim deixe o imóvel, arcará com o pagamento
+                    das despesas e custas judiciais, assim como honorários advocatícios na base de 20 % sob o valor do débito;</p>
+
+                    <p><strong>CLÁUSULA DÉCIMA TERCEIRA:</strong> Fica PROIBIDO o uso de aparelhagem de SOM do tipo "paredão", o uso de som fica autorizado desde que respeite o descanso dos vizinhos e de quem se sentir
+                    incomodado. O volume permitido do som diurno (das 07:00 as 22:00 horas) não poderá ultrapassar os 50 decibéis, e em horário noturno (das 22:00 das 07:00 horas)
+                    não poderá ultrapassar os 30 decibéis.</p>
+
+                    <p><strong>CLÁUSULA DÉCIMA QUARTA:</strong> A chácara não possui salva-vidas, ficando autorizado o uso do serviço por conta e responsabilidade do LOCATÁRIO(A) tal como também sua contratação;</p>
+
+                    <p><strong>CLÁUSULA DÉCIMA QUINTA:</strong> O LOCADOR não se responsabiliza por eventuais "acidentes" que venha acontecer no perímetro da chácara tais como qualquer incidente com animais silvestres e
+                    peçonhentos;</p>
+
+                    <p><strong>CLÁUSULA DÉCIMA SEXTA:</strong> É de responsabilidade exclusiva do(a) LOCATÁRIO(A) a condução do comportamento de seus convidados, bem como caberá a(o) mesmo(a) a exigência de que
+                    seja retirado o convidado que infringir regras de conduta.</p>
+
+                    <p><strong>CLÁUSULA DÉCIMA SETIMA:</strong> O(A) LOCATÁRIO(A) será responsável por quaisquer multas às quais tenha dado causa, por desobediência às convenções ou às normas de civilidade e vizinhança
+                    vigentes no local da chácara.</p>
+
+                    <p><strong>CLÁUSULA DÉCIMA OITAVA:</strong> Fica estabelecido ainda que o(a) LOCATÁRIO(A) seguirá rigorosamente as Leis Federais e Municipais, como intensidade do som (lei do silêncio), permanência de
+                    menores, uso de bebidas alcoólicas, cumprindo ainda a política da boa vizinhança, não incomodando terceiros, na proximidade da locação.</p>
+
+                    <p><strong>CLÁUSULA DÉCIMA NONA:</strong> Os veículos particulares, nos dias de eventos, poderão estacionar nos espaços internos e externos da chácara locado, porém, o(a) LOCADOR(A) exime-se de
+                    qualquer responsabilidade em relação a danos e/ou furto de veículos estacionados tanto nos espaços internos, quanto externos (áreas públicas) do da chácara
+                    alugado.</p>
+
+                    <p><strong>CLÁUSULA VIGÉSIMA:</strong> Fica absolutamente proibido o consumo de alimentos e uso de objetos de vidro (copos, garrafas etc.) dentro da piscina.</p>
+
+                    <p><strong>CLÁUSULA VIGÉSIMA PRIMEIRA:</strong> Fica acordado que o(a) LOCATÁRIO(A) se responsabilizará pelos móveis e equipamentos se danificado, efetuando a entrega nas mesmas condições em que os
+                    encontrou, conforme laudo de vistoria, salvo desgastes naturais, sob pena de indenização dos valores unitários de cada, em caso de prejuízos ao(à) LOCADOR(A).
+                    Constitui-se objeto deste contrato a locação do espaço semicoberto constituído das seguintes estruturas, itens e seus respectivos valores em caso de indenização:</p>
+                </div>
+
+                <?php if(count($descricao_itens) > 0): ?>
+                <div class="receipt-data">
+                    <table style="width: 100%; border-collapse: collapse; margin: 15px 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                        <thead>
+                            <tr>
+                                <th style="border: 1px solid #ddd; padding: 10px; text-align: left; background-color: #3498db; color: white; font-weight: bold;">Item</th>
+                                <th style="border: 1px solid #ddd; padding: 10px; text-align: center; background-color: #3498db; color: white; font-weight: bold; width: 80px;">Qtd</th>
+                                <th style="border: 1px solid #ddd; padding: 10px; text-align: right; background-color: #3498db; color: white; font-weight: bold; width: 120px;">Valor Unitário</th>
+                                <th style="border: 1px solid #ddd; padding: 10px; text-align: right; background-color: #3498db; color: white; font-weight: bold; width: 120px;">Valor Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach($descricao_itens as $item): ?>
+                            <tr>
+                                <td style="border: 1px solid #ddd; padding: 10px; text-align: left;"><?php echo htmlspecialchars($item['descricao']); ?></td>
+                                <td style="border: 1px solid #ddd; padding: 10px; text-align: center;"><?php echo $item['qtd']; ?></td>
+                                <td style="border: 1px solid #ddd; padding: 10px; text-align: right;">R$ <?php echo number_format($item['valor_unitario'], 2, ',', '.'); ?></td>
+                                <td style="border: 1px solid #ddd; padding: 10px; text-align: right;">R$ <?php echo number_format($item['valor_total'], 2, ',', '.'); ?></td>
+                            </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+                <?php endif; ?>
+
+                <?php if(count($reservas) == 0): ?>
+                <div class="receipt-data" style="background-color: #fff3cd; border: 1px solid #ffeaa7; color: #856404; padding: 15px; border-radius: 4px; margin: 15px 0;">
+                    <i class="fas fa-exclamation-triangle"></i> <strong>Nenhuma reserva encontrada!</strong> Para assinar o contrato, você precisa primeiro fazer uma reserva. <a href="reserva.php" class="btn btn-primary btn-sm" style="color: white; background-color: #007bff; border-color: #007bff; padding: 5px 10px; text-decoration: none;">Fazer Reserva</a>
+                </div>
+                <?php endif; ?>
+
+                <div class="receipt-description" style="margin-top: 8px;">
+                    <?php if ($payment_percentage !== null): ?>
+                        <?php if ($payment_percentage == 50): ?>
+                            <p>Em caso de desistência por parte do LOCATÁRIO(A) os 50% (<?php echo getPorcentagemExtenso(50); ?>) pagos como sinal não será devolvido, sendo assim esse valor considerado como Multa a favor do
+                            locador; A(O) LOCADOR(A) não se responsabiliza no caso de o evento não se realizar por motivos que não possam ser acarretados ao mesmo e, portanto, não
+                            devolverá o pagamento.</p>
+                        <?php elseif ($payment_percentage == 100): ?>
+                            <p>O aluguel da temporada corresponde a <?php echo count($reservas_atuais); ?> diária<?php echo (count($reservas_atuais) > 1 ? 's' : ''); ?> totalizando R$<?php echo number_format($total_valor, 2, ',', '.'); ?> (<?php echo numero_extenso(intval($total_valor)); ?> reais), totalizando assim a reserva efetivada com os dias selecionados.
+                            Em caso de desistência por parte do LOCATÁRIO(A) fica retido 50% (<?php echo getPorcentagemExtenso(50); ?>) pagos como sinal e não serão devolvido, sendo assim esse valor considerado como Multa a favor do locador; A(O) LOCADOR(A) não se responsabiliza no caso de o evento não se realizar por motivos que não possam ser acarretados ao mesmo e, portanto, não devolverá o pagamento.</p>
+                        <?php else: ?>
+                            <p>Em caso de desistência por parte do LOCATÁRIO(A) os <?php echo $payment_percentage; ?>% (<?php echo getPorcentagemExtenso($payment_percentage); ?>) pagos como sinal não será devolvido, sendo assim esse valor considerado como Multa a favor do
+                            locador; A(O) LOCADOR(A) não se responsabiliza no caso de o evento não se realizar por motivos que não possam ser acarretados ao mesmo e, portanto, não
+                            devolverá o pagamento.</p>
+                        <?php endif; ?>
+                    <?php else: ?>
+                        <p>Em caso de desistência por parte do LOCATÁRIO(A) os 50% (<?php echo getPorcentagemExtenso(50); ?>) pagos como sinal não será devolvido, sendo assim esse valor considerado como Multa a favor do
+                        locador; A(O) LOCADOR(A) não se responsabiliza no caso de o evento não se realizar por motivos que não possam ser acarretados ao mesmo e, portanto, não
+                        devolverá o pagamento.</p>
+                    <?php endif; ?>
+                </div>
+                
+                <?php if(!$contrato_assinado): ?>
+                <div class="signature-section">
+                    <table style="width: 100%; text-align: center !important; margin: 10px auto 0; border: none; border-collapse: collapse;">
+                        <tr>
+                            <td style="text-align: center !important; padding: 0; margin: 0;">
+                                <div style="text-align: center !important; display: block; margin-top: 15px;">
+                                    <?php
+                                    $meses = [
+                                        '01' => 'janeiro', '02' => 'fevereiro', '03' => 'março', '04' => 'abril',
+                                        '05' => 'maio', '06' => 'junho', '07' => 'julho', '08' => 'agosto',
+                                        '09' => 'setembro', '10' => 'outubro', '11' => 'novembro', '12' => 'dezembro'
+                                    ];
+                                    $mes_atual = date('m');
+                                    $nome_mes = $meses[$mes_atual] ?? 'mês desconhecido';
+                                    ?>
+                                    Boa Vista – RR, <?php echo date('d'); ?> de <?php echo $nome_mes; ?> de <?php echo date('Y'); ?>
+                                </div>
+
+                                <!-- Checkbox e botão de assinatura -->
+                                <div style="margin: 15px 0;">
+                                    <input class="custom-checkbox" type="checkbox" id="aceiteContrato" required>
+                                    <label for="aceiteContrato" style="display: inline-block; margin-left: 8px;">
+                                        Li e concordo com todos os termos do contrato
+                                    </label>
+                                </div>
+
+                                <div style="margin: 15px 0;">
+                                    <button class="btn btn-secondary btn-lg" type="button" id="btnAssinarContrato" disabled style="background-color: #6c757d; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: not-allowed;">
+                                        <i class="fas fa-signature"></i> Assinar Contrato
+                                    </button>
+                                </div>
+
+                                <!-- Mensagem de sucesso após assinatura -->
+                                <div id="mensagemAssinatura" class="alert alert-success" style="display: none; margin: 15px 0; background-color: #d4edda; border: 1px solid #c3e6cb; color: #155724; padding: 10px; border-radius: 4px;">
+                                    <i class="fas fa-check-circle"></i> Contrato assinado com sucesso!
+                                </div>
+
+                                <div class="signature-line">
+                                    <div class="signature-item">
+                                        <div class="signature-name"><?php echo $user['nome']; ?></div>
+                                        <div class="signature-label" style="text-align: center !important; display: block; margin-top: 5px;">
+                                            <span style="display: inline-block; border-top: 1px solid #000; min-width: 200px; max-width: 50%; height: 1px;"></span><br>
+                                            Locatário(a)
+                                        </div>
+                                    </div>
+                                    <div class="signature-item">
+                                        <?php
+                                        // Caminho para a imagem de assinatura
+                                        $assinatura_path = '../assets/imagens/assinatura.png';
+                                        if (file_exists($assinatura_path)) {
+                                            // Converter a imagem para base64 para garantir que ela seja incorporada ao PDF
+                                            $imageData = base64_encode(file_get_contents($assinatura_path));
+                                            echo '<img src="data:image/png;base64,' . $imageData . '" width="200" style="height: auto; margin-bottom: 5px;" alt="Assinatura">';
+                                        }
+                                        ?>
+                                        <div class="signature-name">Kelmy Araújo Vasconcelos</div>
+                                        <div class="signature-label" style="text-align: center !important; display: block; margin-top: 5px;">
+                                            <span style="display: inline-block; border-top: 1px solid #000; min-width: 200px; max-width: 50%; height: 1px;"></span><br>
+                                            Locador
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+                <?php else: ?>
+                <div class="signature-section">
+                    <table style="width: 100%; text-align: center !important; margin: 10px auto 0; border: none; border-collapse: collapse;">
+                        <tr>
+                            <td style="text-align: center !important; padding: 0; margin: 0;">
+                                <div style="text-align: center !important; display: block; margin-top: 15px;">
+                                    <?php
+                                    $meses = [
+                                        '01' => 'janeiro', '02' => 'fevereiro', '03' => 'março', '04' => 'abril',
+                                        '05' => 'maio', '06' => 'junho', '07' => 'julho', '08' => 'agosto',
+                                        '09' => 'setembro', '10' => 'outubro', '11' => 'novembro', '12' => 'dezembro'
+                                    ];
+                                    $mes_atual = date('m');
+                                    $nome_mes = $meses[$mes_atual] ?? 'mês desconhecido';
+                                    ?>
+                                    Boa Vista – RR, <?php echo date('d'); ?> de <?php echo $nome_mes; ?> de <?php echo date('Y'); ?>
+                                </div>
+
+                                <div class="signature-line">
+                                    <div class="signature-item">
+                                        <?php if($contrato_assinado): ?>
+                                        <div style="margin: 15px 0;">
+                                            <span class="btn btn-success btn-sm" style="background-color: #28a745; color: white; border: none; padding: 5px 10px; border-radius: 4px; display: inline-block;"><i class="fas fa-signature"></i> Documento assinado digitalmente</span>
+                                        </div>
+                                        <?php endif; ?>
+                                        <div class="signature-name"><?php echo $user['nome']; ?></div>
+                                        <div class="signature-label" style="text-align: center !important; display: block; margin-top: 5px;">
+                                            <span style="display: inline-block; border-top: 1px solid #000; min-width: 200px; max-width: 50%; height: 1px;"></span><br>
+                                            Locatário(a)
+                                        </div>
+                                    </div>
+                                    <div class="signature-item">
+                                        <?php
+                                        // Caminho para a imagem de assinatura
+                                        $assinatura_path = '../assets/imagens/assinatura.png';
+                                        if (file_exists($assinatura_path)) {
+                                            // Converter a imagem para base64 para garantir que ela seja incorporada ao PDF
+                                            $imageData = base64_encode(file_get_contents($assinatura_path));
+                                            echo '<img src="data:image/png;base64,' . $imageData . '" width="200" style="height: auto; margin-bottom: 5px;" alt="Assinatura">';
+                                        }
+                                        ?>
+                                        <div class="signature-name">Kelmy Araújo Vasconcelos</div>
+                                        <div class="signature-label" style="text-align: center !important; display: block; margin-top: 5px;">
+                                            <span style="display: inline-block; border-top: 1px solid #000; min-width: 200px; max-width: 50%; height: 1px;"></span><br>
+                                            Locador
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+                <?php endif; ?>
+
+                <?php if($contrato_assinado): ?>
+                <!-- Mensagem de contrato já assinado -->
+                <?php if ($reserva_id_fornecido): ?>
+                <div class="alert alert-info" style="background-color: #d1ecf1; border: 1px solid #bee5eb; color: #0c5460; padding: 10px; border-radius: 4px; margin: 15px 0;">
+                    <i class="fas fa-check-circle"></i> <strong>Contrato já assinado!</strong> Você já assinou o contrato para esta reserva.
+                </div>
+                <?php else: ?>
+                <div class="alert alert-info" style="background-color: #d1ecf1; border: 1px solid #bee5eb; color: #0c5460; padding: 10px; border-radius: 4px; margin: 15px 0;">
+                    <i class="fas fa-check-circle"></i> <strong>Contrato já assinado!</strong> Você já assinou o contrato para <?php echo count($reservas); ?> reserva<?php echo count($reservas) > 1 ? 's' : ''; ?>.
+                </div>
+                <?php endif; ?>
+                <?php endif; ?>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+
+</main>
+
+    <footer class="fixed-bottom bg-dark text-white py-2">
+        <div class="container-fluid px-0">
+            <nav class="row g-0 text-center">
+                <div class="col-3 py-2">
+                    <a href="../index.php" class="text-white text-decoration-none d-block h-100 d-flex flex-column align-items-center justify-content-center">
+                        <i class="fas fa-home mb-1"></i>
+                        <small>Inicio</small>
+                    </a>
+                </div>
+                <div class="col-3 py-2">
+                    <a href="reserva.php" class="text-white text-decoration-none d-block h-100 d-flex flex-column align-items-center justify-content-center">
+                        <i class="fas fa-calendar-alt mb-1"></i>
+                        <small>Reserve</small>
+                    </a>
+                </div>
+                <div class="col-3 py-2">
+                    <a href="suas_reservas.php" class="text-white text-decoration-none d-block h-100 d-flex flex-column align-items-center justify-content-center">
+                        <i class="fas fa-calendar mb-1"></i>
+                        <small>Reservas</small>
+                    </a>
+                </div>
+                <div class="col-3 py-2">
+                    <a href="perfil.php" class="text-white text-decoration-none d-block h-100 d-flex flex-column align-items-center justify-content-center">
+                        <i class="fas fa-user mb-1"></i>
+                        <small>Perfil</small>
+                    </a>
+                </div>
+            </nav>
+        </div>
+    </footer>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+console.log('Contrato page loaded successfully');
+
+// Função para carregar o nome do usuário e atualizar o cabeçalho
+function loadUserName() {
+    console.log('Loading user name...');
+    $.ajax({
+        url: '../php/get_user_info.php',
+        type: 'GET',
+        dataType: 'json',
+        success: function(response) {
+            console.log('User info response:', response);
+            if (response.success && response.user_name) {
+                document.getElementById('header-title-contrato').textContent = 'Olá ' + response.user_name;
+            } else {
+                document.getElementById('header-title-contrato').textContent = 'Contrato de Locação';
+            }
+        },
+        error: function(xhr, status, error) {
+            console.error('Error loading user info:', error);
+            console.error('XHR status:', status);
+            console.error('Response text:', xhr.responseText);
+            document.getElementById('header-title-contrato').textContent = 'Contrato de Locação';
+        }
+    });
+}
+
+// Função para garantir visibilidade do conteúdo do contrato
+function ensureContractVisibility() {
+    console.log('Ensuring contract visibility...');
+
+    // Verificar e forçar visibilidade dos principais elementos
+    $('#main-contract-area').show().css({
+        'display': 'block !important',
+        'visibility': 'visible !important',
+        'opacity': '1 !important',
+        'height': 'auto !important'
+    });
+
+    $('.contract-content').show().css({
+        'display': 'block !important',
+        'visibility': 'visible !important',
+        'opacity': '1 !important',
+        'height': 'auto !important',
+        'min-height': '70vh !important'
+    });
+
+    $('.contract-section, .contract-clause, .signature-section').show().css({
+        'display': 'block !important',
+        'visibility': 'visible !important',
+        'opacity': '1 !important'
+    });
+
+    // Verificar se os elementos existem e têm conteúdo
+    console.log('Main contract area exists:', $('#main-contract-area').length > 0);
+    console.log('Contract content exists:', $('.contract-content').length > 0);
+    console.log('Contract sections count:', $('.contract-section').length);
+    console.log('Contract clauses count:', $('.contract-clause').length);
+
+    // Forçar renderização
+    setTimeout(function() {
+        $('#main-contract-area')[0].offsetHeight;
+    }, 100);
+}
+
+// Carregar o nome do usuário para atualizar o cabeçalho quando o documento estiver pronto
+$(document).ready(function() {
+    console.log('Document ready fired');
+    console.log('Contract signed status: <?php echo $contrato_assinado ? "true" : "false"; ?>');
+    console.log('Reservation IDs: <?php echo json_encode($reservas_ids); ?>');
+    console.log('Number of reservations found: <?php echo count($reservas); ?>');
+
+    // Garantir visibilidade do contrato imediatamente
+    ensureContractVisibility();
+
+    // Tentar novamente após um pequeno atraso
+    setTimeout(ensureContractVisibility, 500);
+    setTimeout(ensureContractVisibility, 1000);
+
+    loadUserName();
+
+    <?php if(!$contrato_assinado): ?>
+    console.log('Setting up signature form handlers');
+
+    // Habilitar/desabilitar botão com base no checkbox
+    $('#aceiteContrato').on('change', function() {
+        console.log('Checkbox changed, checked:', this.checked);
+        $('#btnAssinarContrato').prop('disabled', !this.checked);
+    });
+
+    // Ação do botão de assinatura
+    $('#btnAssinarContrato').on('click', function() {
+        console.log('Signature button clicked');
+        if ($('#aceiteContrato').is(':checked')) {
+            console.log('Checkbox is checked, proceeding with signature');
+            // Desabilitar o botão durante o processamento
+            $('#btnAssinarContrato').prop('disabled', true).text('Processando...').addClass('disabled');
+
+            // Registrar a assinatura no banco de dados
+            var requestData = {};
+            <?php if ($reservas_ids): ?>
+            requestData.reservas_ids = <?php echo json_encode($reservas_ids); ?>;
+            <?php elseif (isset($_GET['reserva_id']) && !empty($_GET['reserva_id'])): ?>
+            requestData.reserva_id = '<?php echo $_GET['reserva_id']; ?>';
+            <?php else: ?>
+            requestData.reserva_id = '';
+            <?php endif; ?>
+
+            console.log('Enviando dados:', requestData);
+
+            $.ajax({
+                url: '../php/registrar_assinatura_contrato.php',
+                type: 'POST',
+                data: requestData,
+                dataType: 'json',
+                success: function(response) {
+                    console.log('Signature registration response:', response);
+                    if(response.success) {
+                        // Mostrar mensagem de sucesso
+                        $('#mensagemAssinatura').show();
+
+                        // Esconder o formulário de assinatura
+                        $('#aceiteContrato').parent().hide();
+                        $('#btnAssinarContrato').hide();
+
+                        // Redirecionar para a página de reservas após um breve delay
+                        setTimeout(function() {
+                            window.location.href = 'suas_reservas.php';
+                        }, 2000);
+                    } else {
+                        Swal.fire({
+                            title: 'Erro!',
+                            text: 'Erro ao registrar assinatura: ' + response.message,
+                            icon: 'error',
+                            confirmButtonText: 'OK'
+                        });
+                        // Reabilitar o botão
+                        $('#btnAssinarContrato').prop('disabled', false).text('Assinar Contrato').removeClass('disabled');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Erro AJAX:', xhr.responseText);
+                    console.error('Status:', status);
+                    console.error('Error:', error);
+
+                    Swal.fire({
+                        title: 'Erro de Comunicação',
+                        text: 'Erro na comunicação com o servidor: ' + error + '. Tente novamente.',
+                        icon: 'error',
+                        confirmButtonText: 'OK'
+                    });
+                    // Reabilitar o botão
+                    $('#btnAssinarContrato').prop('disabled', false).text('Assinar Contrato').removeClass('disabled');
+                }
+            });
+        } else {
+            console.log('Checkbox is not checked');
+            Swal.fire({
+                title: 'Atenção!',
+                text: 'Por favor, leia e aceite os termos do contrato antes de assinar.',
+                icon: 'warning',
+                confirmButtonText: 'OK'
+            });
+        }
+    });
+    <?php else: ?>
+    console.log('Contract already signed, not setting up signature handlers');
+    <?php endif; ?>
+
+    // Adicionar manipulador de logout
+    $('#logout-link-contrato').on('click', function(e) {
+        console.log('Logout button clicked');
+        e.preventDefault();
+
+        $.ajax({
+            url: '../php/logout.php',
+            type: 'POST',
+            dataType: 'json',
+            success: function(response) {
+                console.log('Logout response:', response);
+                if(response.success) {
+                    // Limpar possíveis dados da sessão no frontend e redirecionar de forma limpa
+                    window.location.replace('login.php');
+                } else {
+                    Swal.fire({
+                        title: 'Erro!',
+                        text: 'Erro ao fazer logout. Por favor, tente novamente.',
+                        icon: 'error',
+                        confirmButtonText: 'OK'
+                    });
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Logout error:', error);
+                console.error('XHR status:', status);
+                console.error('Response text:', xhr.responseText);
+                // Mesmo em caso de erro, redirecionar para login
+                window.location.href = 'login.php';
+            }
+        });
+    });
+
+<?php
+    // Capturar o conteúdo HTML do contrato
+    $html_content = ob_get_contents();
+    ob_end_clean();
+
+    // Verificar se a biblioteca TCPDF está instalada
+    if (file_exists('../vendor/autoload.php')) {
+        require_once '../vendor/autoload.php';
+
+        // Verificar se TCPDF está disponível
+        if (class_exists('TCPDF')) {
+            // Criar instância do TCPDF padrão
+            $pdf = new TCPDF(PDF_PAGE_ORIENTATION, PDF_UNIT, PDF_PAGE_FORMAT, true, 'UTF-8', false);
+
+            // Definir informações do documento
+            $pdf->SetCreator(PDF_CREATOR);
+            $pdf->SetTitle('Contrato de Locação Temporária - Chácara Recanto do Sossego');
+            $pdf->SetSubject('Contrato de Locação');
+            $pdf->SetKeywords('Contrato, PDF, Chácara');
+
+            // Definir fonte padrão usando a configuração padrão do TCPDF
+            $pdf->SetFont(PDF_FONT_NAME_MAIN, '', 10);
+
+            // Remover headers e footers
+            $pdf->setPrintHeader(false);
+            $pdf->setPrintFooter(false);
+
+            // Definir margens
+            $pdf->SetMargins(PDF_MARGIN_LEFT, PDF_MARGIN_TOP, PDF_MARGIN_RIGHT);
+            $pdf->SetAutoPageBreak(TRUE, PDF_MARGIN_BOTTOM);
+
+            // Definir informações do autor
+            $pdf->SetAuthor('Chácara Recanto do Sossego');
+
+            // Adicionar uma página
+            $pdf->AddPage();
+
+            // Adicionar marca d'água após adicionar a página, mas antes do conteúdo
+            // Tenta carregar o arquivo de imagem e converter para base64 para garantir que funcione
+            $watermark_path = $_SERVER['DOCUMENT_ROOT'] . '/chacararecantodosossegorr.com.br/repo_limpo/assets/imagens/logo.jpeg';
+
+            // Se o caminho acima não funcionar, tentar outros formatos
+            if (!file_exists($watermark_path)) {
+                $watermark_path = dirname(__FILE__) . '/../assets/imagens/logo.jpeg';
+            }
+
+            if (!file_exists($watermark_path)) {
+                // Último fallback - tentar logo_cima.jpeg
+                $watermark_path = $_SERVER['DOCUMENT_ROOT'] . '/chacararecantodosossegorr.com.br/repo_limpo/assets/imagens/logo_cima.jpeg';
+            }
+
+            if (!file_exists($watermark_path)) {
+                $watermark_path = dirname(__FILE__) . '/../assets/imagens/logo_cima.jpeg';
+            }
+
+            if (file_exists($watermark_path)) {
+                // Converter imagem para base64 e adicionar como marca d'água
+                $imageData = file_get_contents($watermark_path);
+                if ($imageData !== false) {
+                    $pdf->SetAlpha(0.15);
+                    $img_width = 150; // Tamanho fixo para garantir visibilidade
+                    $img_height = 0; // O TCPDF calculará automaticamente a altura proporcional
+                    $page_width = $pdf->getPageWidth();
+                    $page_height = $pdf->getPageHeight();
+
+                    // Calcular posição central exata
+                    $x_pos = ($page_width - $img_width) / 2;
+
+                    // Para centralizar verticalmente, vamos estimar a altura da imagem após o redimensionamento
+                    // Assumindo uma proporção comum para logos (mais largos que altos)
+                    $estimated_img_height = $img_width * 0.5; // Ajustar conforme necessário para o formato do logo
+                    $y_pos = ($page_height - $estimated_img_height) / 2 - 80; // Subir a imagem 80 pixels
+
+                    // Adiciona a imagem como marca d'água na posição centralizada
+                    $pdf->Image('@' . $imageData, $x_pos, $y_pos, $img_width, $img_height, 'JPEG', '', '', false, 300, '', false, false, 0, false, false, false);
+                    $pdf->SetAlpha(1);
+                }
+            }
+
+            // Escrever o conteúdo HTML
+            $pdf->writeHTML($html_content, true, false, true, false, '');
+
+            // Enviar o PDF para visualização no navegador (em vez de download)
+            $pdf->Output('contrato_chacara_' . time() . '.pdf', 'I');
+        } else {
+            // Se o TCPDF não estiver instalado, exibir o HTML como antes
+            echo $html_content;
+        }
+    } else {
+        // Se o autoload do Composer não existir, exibir o HTML como antes
+        echo $html_content;
+    }
+<?php
+    // Capturar o conteúdo HTML do contrato
+    $html_content = ob_get_contents();
+    ob_end_clean();
+
+    // Verificar se a biblioteca TCPDF está instalada
+    if (file_exists('../vendor/autoload.php')) {
+        require_once '../vendor/autoload.php';
+
+        // Verificar se TCPDF está disponível
+        if (class_exists('TCPDF')) {
+            // Criar instância do TCPDF padrão
+            $pdf = new TCPDF(PDF_PAGE_ORIENTATION, PDF_UNIT, PDF_PAGE_FORMAT, true, 'UTF-8', false);
+
+            // Definir informações do documento
+            $pdf->SetCreator(PDF_CREATOR);
+            $pdf->SetTitle('Contrato de Locação Temporária - Chácara Recanto do Sossego');
+            $pdf->SetSubject('Contrato de Locação');
+            $pdf->SetKeywords('Contrato, PDF, Chácara');
+
+            // Definir fonte padrão usando a configuração padrão do TCPDF
+            $pdf->SetFont(PDF_FONT_NAME_MAIN, '', 10);
+
+            // Remover headers e footers
+            $pdf->setPrintHeader(false);
+            $pdf->setPrintFooter(false);
+
+            // Definir margens
+            $pdf->SetMargins(PDF_MARGIN_LEFT, PDF_MARGIN_TOP, PDF_MARGIN_RIGHT);
+            $pdf->SetAutoPageBreak(TRUE, PDF_MARGIN_BOTTOM);
+
+            // Definir informações do autor
+            $pdf->SetAuthor('Chácara Recanto do Sossego');
+
+            // Adicionar uma página
+            $pdf->AddPage();
+
+            // Adicionar marca d'água após adicionar a página, mas antes do conteúdo
+            // Tenta carregar o arquivo de imagem e converter para base64 para garantir que funcione
+            $watermark_path = $_SERVER['DOCUMENT_ROOT'] . '/chacararecantodosossegorr.com.br/repo_limpo/assets/imagens/logo.jpeg';
+
+            // Se o caminho acima não funcionar, tentar outros formatos
+            if (!file_exists($watermark_path)) {
+                $watermark_path = dirname(__FILE__) . '/../assets/imagens/logo.jpeg';
+            }
+
+            if (!file_exists($watermark_path)) {
+                // Último fallback - tentar logo_cima.jpeg
+                $watermark_path = $_SERVER['DOCUMENT_ROOT'] . '/chacararecantodosossegorr.com.br/repo_limpo/assets/imagens/logo_cima.jpeg';
+            }
+
+            if (!file_exists($watermark_path)) {
+                $watermark_path = dirname(__FILE__) . '/../assets/imagens/logo_cima.jpeg';
+            }
+
+            if (file_exists($watermark_path)) {
+                // Converter imagem para base64 e adicionar como marca d'água
+                $imageData = file_get_contents($watermark_path);
+                if ($imageData !== false) {
+                    $pdf->SetAlpha(0.15);
+                    $img_width = 150; // Tamanho fixo para garantir visibilidade
+                    $img_height = 0; // O TCPDF calculará automaticamente a altura proporcional
+                    $page_width = $pdf->getPageWidth();
+                    $page_height = $pdf->getPageHeight();
+
+                    // Calcular posição central exata
+                    $x_pos = ($page_width - $img_width) / 2;
+
+                    // Para centralizar verticalmente, vamos estimar a altura da imagem após o redimensionamento
+                    // Assumindo uma proporção comum para logos (mais largos que altos)
+                    $estimated_img_height = $img_width * 0.5; // Ajustar conforme necessário para o formato do logo
+                    $y_pos = ($page_height - $estimated_img_height) / 2 - 80; // Subir a imagem 80 pixels
+
+                    // Adiciona a imagem como marca d'água na posição centralizada
+                    $pdf->Image('@' . $imageData, $x_pos, $y_pos, $img_width, $img_height, 'JPEG', '', '', false, 300, '', false, false, 0, false, false, false);
+                    $pdf->SetAlpha(1);
+                }
+            }
+
+            // Escrever o conteúdo HTML
+            $pdf->writeHTML($html_content, true, false, true, false, '');
+
+            // Enviar o PDF para visualização no navegador (em vez de download)
+            $pdf->Output('contrato_chacara_' . time() . '.pdf', 'I');
+        } else {
+            // Se o TCPDF não estiver instalado, exibir o HTML e mostrar instruções para salvar como PDF
+            header('Content-Type: text/html; charset=utf-8');
+            header('Content-Disposition: inline; filename="contrato_chacara_' . time() . '.html"');
+            echo $html_content;
+            echo '<script>
+                alert("Para salvar como PDF, use a função \'Salvar como PDF\' do seu navegador (Ctrl+P ou Cmd+P).");
+            </script>';
+        }
+    }
+} elseif ($gerar_pdf) {
+    // Se for para gerar PDF mas não tiver biblioteca, exibir mensagem
+    header('Content-Type: text/html; charset=utf-8');
+    echo "<h1>Erro: Biblioteca TCPDF não encontrada</h1>";
+    echo "<p>Para gerar o PDF, é necessário instalar a biblioteca TCPDF usando Composer.</p>";
+} else {
+    // Se não for para gerar PDF, continuar com o HTML normal
+    // (O conteúdo já foi enviado anteriormente)
+}
+?>
+
+    <footer class="fixed-bottom bg-dark text-white py-2">
+        <div class="container-fluid px-0">
+            <nav class="row g-0 text-center">
+                <div class="col-3 py-2">
+                    <a href="../index.php" class="text-white text-decoration-none d-block h-100 d-flex flex-column align-items-center justify-content-center">
+                        <i class="fas fa-home mb-1"></i>
+                        <small>Inicio</small>
+                    </a>
+                </div>
+                <div class="col-3 py-2">
+                    <a href="reserva.php" class="text-white text-decoration-none d-block h-100 d-flex flex-column align-items-center justify-content-center">
+                        <i class="fas fa-calendar-alt mb-1"></i>
+                        <small>Reserve</small>
+                    </a>
+                </div>
+                <div class="col-3 py-2">
+                    <a href="suas_reservas.php" class="text-white text-decoration-none d-block h-100 d-flex flex-column align-items-center justify-content-center">
+                        <i class="fas fa-calendar mb-1"></i>
+                        <small>Reservas</small>
+                    </a>
+                </div>
+                <div class="col-3 py-2">
+                    <a href="perfil.php" class="text-white text-decoration-none d-block h-100 d-flex flex-column align-items-center justify-content-center">
+                        <i class="fas fa-user mb-1"></i>
+                        <small>Perfil</small>
+                    </a>
+                </div>
+            </nav>
+        </div>
+    </footer>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+console.log('Contrato page loaded successfully');
+
+// Função para carregar o nome do usuário e atualizar o cabeçalho
+function loadUserName() {
+    console.log('Loading user name...');
+    $.ajax({
+        url: '../php/get_user_info.php',
+        type: 'GET',
+        dataType: 'json',
+        success: function(response) {
+            console.log('User info response:', response);
+            if (response.success && response.user_name) {
+                document.getElementById('header-title-contrato').textContent = 'Olá ' + response.user_name;
+            } else {
+                document.getElementById('header-title-contrato').textContent = 'Contrato de Locação';
+            }
+        },
+        error: function(xhr, status, error) {
+            console.error('Error loading user info:', error);
+            console.error('XHR status:', status);
+            console.error('Response text:', xhr.responseText);
+            document.getElementById('header-title-contrato').textContent = 'Contrato de Locação';
+        }
+    });
+}
+
+// Função para garantir visibilidade do conteúdo do contrato
+function ensureContractVisibility() {
+    console.log('Ensuring contract visibility...');
+
+    // Verificar e forçar visibilidade dos principais elementos
+    $('#main-contract-area').show().css({
+        'display': 'block !important',
+        'visibility': 'visible !important',
+        'opacity': '1 !important',
+        'height': 'auto !important'
+    });
+
+    $('.contract-content').show().css({
+        'display': 'block !important',
+        'visibility': 'visible !important',
+        'opacity': '1 !important',
+        'height': 'auto !important',
+        'min-height': '70vh !important'
+    });
+
+    $('.contract-section, .contract-clause, .signature-section').show().css({
+        'display': 'block !important',
+        'visibility': 'visible !important',
+        'opacity': '1 !important'
+    });
+
+    // Verificar se os elementos existem e têm conteúdo
+    console.log('Main contract area exists:', $('#main-contract-area').length > 0);
+    console.log('Contract content exists:', $('.contract-content').length > 0);
+    console.log('Contract sections count:', $('.contract-section').length);
+    console.log('Contract clauses count:', $('.contract-clause').length);
+
+    // Forçar renderização
+    setTimeout(function() {
+        $('#main-contract-area')[0].offsetHeight;
+    }, 100);
+}
+
+// Carregar o nome do usuário para atualizar o cabeçalho quando o documento estiver pronto
+$(document).ready(function() {
+    console.log('Document ready fired');
+    console.log('Contract signed status: <?php echo $contrato_assinado ? "true" : "false"; ?>');
+    console.log('Reservation IDs: <?php echo json_encode($reservas_ids); ?>');
+    console.log('Number of reservations found: <?php echo count($reservas); ?>');
+
+    // Garantir visibilidade do contrato imediatamente
+    ensureContractVisibility();
+
+    // Tentar novamente após um pequeno atraso
+    setTimeout(ensureContractVisibility, 500);
+    setTimeout(ensureContractVisibility, 1000);
+
+    loadUserName();
+
+    <?php if(!$contrato_assinado): ?>
+    console.log('Setting up signature form handlers');
+
+    // Habilitar/desabilitar botão com base no checkbox
+    $('#aceiteContrato').on('change', function() {
+        console.log('Checkbox changed, checked:', this.checked);
+        $('#btnAssinarContrato').prop('disabled', !this.checked);
+    });
+
+    // Ação do botão de assinatura
+    $('#btnAssinarContrato').on('click', function() {
+        console.log('Signature button clicked');
+        if ($('#aceiteContrato').is(':checked')) {
+            console.log('Checkbox is checked, proceeding with signature');
+            // Desabilitar o botão durante o processamento
+            $('#btnAssinarContrato').prop('disabled', true).text('Processando...').addClass('disabled');
+
+            // Registrar a assinatura no banco de dados
+            var requestData = {};
+            <?php if ($reservas_ids): ?>
+            requestData.reservas_ids = <?php echo json_encode($reservas_ids); ?>;
+            <?php elseif (isset($_GET['reserva_id']) && !empty($_GET['reserva_id'])): ?>
+            requestData.reserva_id = '<?php echo $_GET['reserva_id']; ?>';
+            <?php else: ?>
+            requestData.reserva_id = '';
+            <?php endif; ?>
+
+            console.log('Enviando dados:', requestData);
+
+            $.ajax({
+                url: '../php/registrar_assinatura_contrato.php',
+                type: 'POST',
+                data: requestData,
+                dataType: 'json',
+                success: function(response) {
+                    console.log('Signature registration response:', response);
+                    if(response.success) {
+                        // Mostrar mensagem de sucesso
+                        $('#mensagemAssinatura').show();
+
+                        // Esconder o formulário de assinatura
+                        $('#aceiteContrato').parent().hide();
+                        $('#btnAssinarContrato').hide();
+
+                        // Redirecionar para a página de reservas após um breve delay
+                        setTimeout(function() {
+                            window.location.href = 'suas_reservas.php';
+                        }, 2000);
+                    } else {
+                        Swal.fire({
+                            title: 'Erro!',
+                            text: 'Erro ao registrar assinatura: ' + response.message,
+                            icon: 'error',
+                            confirmButtonText: 'OK'
+                        });
+                        // Reabilitar o botão
+                        $('#btnAssinarContrato').prop('disabled', false).text('Assinar Contrato').removeClass('disabled');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Erro AJAX:', xhr.responseText);
+                    console.error('Status:', status);
+                    console.error('Error:', error);
+
+                    Swal.fire({
+                        title: 'Erro de Comunicação',
+                        text: 'Erro na comunicação com o servidor: ' + error + '. Tente novamente.',
+                        icon: 'error',
+                        confirmButtonText: 'OK'
+                    });
+                    // Reabilitar o botão
+                    $('#btnAssinarContrato').prop('disabled', false).text('Assinar Contrato').removeClass('disabled');
+                }
+            });
+        } else {
+            console.log('Checkbox is not checked');
+            Swal.fire({
+                title: 'Atenção!',
+                text: 'Por favor, leia e aceite os termos do contrato antes de assinar.',
+                icon: 'warning',
+                confirmButtonText: 'OK'
+            });
+        }
+    });
+    <?php else: ?>
+    console.log('Contract already signed, not setting up signature handlers');
+    <?php endif; ?>
+
+    // Adicionar manipulador de logout
+    $('#logout-link-contrato').on('click', function(e) {
+        console.log('Logout button clicked');
+        e.preventDefault();
+
+        $.ajax({
+            url: '../php/logout.php',
+            type: 'POST',
+            dataType: 'json',
+            success: function(response) {
+                console.log('Logout response:', response);
+                if(response.success) {
+                    // Limpar possíveis dados da sessão no frontend e redirecionar de forma limpa
+                    window.location.replace('login.php');
+                } else {
+                    Swal.fire({
+                        title: 'Erro!',
+                        text: 'Erro ao fazer logout. Por favor, tente novamente.',
+                        icon: 'error',
+                        confirmButtonText: 'OK'
+                    });
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Logout error:', error);
+                console.error('XHR status:', status);
+                console.error('Response text:', xhr.responseText);
+                // Mesmo em caso de erro, redirecionar para login
+                window.location.href = 'login.php';
+            }
+        });
+    });
+
+    // Check if content is visible
+    setTimeout(function() {
+        console.log('Checking if contract content is visible...');
+        console.log('Contract content element exists:', $('.contract-content').length > 0);
+        console.log('Contract content element is visible:', $('.contract-content').is(':visible'));
+        console.log('Contract content element display property:', $('.contract-content').css('display'));
+        console.log('Contract content element height:', $('.contract-content').height());
+        console.log('Number of contract clauses:', $('.contract-clause').length);
+        console.log('Number of contract sections:', $('.contract-section').length);
+    }, 1000);
+});
+</script>
+<!-- CONTRATO.PHP DEBUG: HTML output completed -->
+
+</body>
+</html>
