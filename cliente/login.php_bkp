@@ -17,7 +17,7 @@ if (isset($_SESSION['user_id'])) {
 
     if ($result->num_rows > 0) {
         // Usuário ainda existe no banco, redirecionar para reserva
-        header("Location: https://chacararecantodosossegorr.com.br/cliente/reserva.php");
+        header("Location: https://chacararecantodosossegorr.com.br/repo_limpo/cliente/reserva.php");
         exit();
     } else {
         // Usuário não existe mais no banco, limpar a sessão
@@ -67,7 +67,7 @@ if (isset($_GET['email_login']) && isset($_GET['senha_login'])) {
                 $_SESSION['user_name'] = $user['nome'];
                 
                 // Redirecionar para a página de reserva com um parâmetro para limpar a URL
-                header("Location: https://chacararecantodosossegorr.com.br/cliente/reserva.php?login=success");
+                header("Location: https://chacararecantodosossegorr.com.br/repo_limpo/cliente/reserva.php?login=success");
                 exit();
             }
         }

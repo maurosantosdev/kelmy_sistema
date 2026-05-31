@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Admin Agenda - Chácara Bahamas</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="UTF-8">
+    <!-- Caminhos para os arquivos CSS e JS -->
+    <link rel="stylesheet" href="/repo_limpo/assets/css/jquery.mobile-1.4.5.min.css">
+    <link rel="stylesheet" href="/repo_limpo/admin/style.css">
+    
+    <!-- CSS Adicional para o Calendário -->
+    <style>
+        #calendar {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 5px;
+            margin-bottom: 20px;
+        }
+        #calendar > div {
+            padding: 10px;
+            border: 1px solid #ccc;
+            text-align: center;
+            background-color: #fff;
+        }
+        #calendar .day-header {
+            font-weight: bold;
+            background-color: #eee;
+        }
+        #calendar .day.has-price {
+            background-color: #a5d6a7; /* Verde para dias com preço */
+            cursor: pointer;
+        }
+        #calendar .day.empty {
+            background-color: #f5f5f5;
+        }
+        #calendar .price {
+            font-size: 0.8em;
+            color: #004d40;
+        }
+        #calendarControls { margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; }
+    </style>
+</head>
+<body>
+
+<div data-role="page" id="agendaPage" data-theme="b">
+    <div data-role="header" data-position="fixed">
+        <a href="#nav-panel" class="ui-btn ui-shadow ui-corner-all ui-btn-icon-left ui-icon-bars">Menu</a>
+        <h1>Gerenciar Agenda</h1>
+    </div>
+
+    <div data-role="main" class="ui-content">
+        <h3>Calendário de Preços</h3>
+
+        <!-- Controles para navegar entre os meses -->
+        <div id="calendarControls">
+            <button id="prevMonth" class="ui-btn ui-icon-arrow-l ui-btn-icon-notext ui-corner-all">Mês Anterior</button>
+            <h4 id="currentMonthYear" style="margin: 0;"></h4>
+            <button id="nextMonth" class="ui-btn ui-icon-arrow-r ui-btn-icon-notext ui-corner-all">Próximo Mês</button>
+        </div>
+        
+        <!-- O Calendário será gerado aqui pelo JavaScript -->
+        <div id="calendar"></div>
+
+        <div data-role="collapsible" data-collapsed="false">
+            <h4>Definir Preço para um Período</h4>
+            <form id="priceForm">
+                <label for="data_inicio">Data de Início:</label>
+                <input type="date" name="data_inicio" id="data_inicio" required>
+
+                <label for="data_fim">Data de Fim:</label>
+                <input type="date" name="data_fim" id="data_fim" required>
+
+                <label for="preco">Preço por dia (R$):</label>
+                <input type="text" name="preco" id="preco" placeholder="Digite o valor" required>
+                
+                <button type="submit" id="savePriceBtn" class="ui-btn ui-btn-b ui-corner-all">Salvar Período</button>
+            </form>
+            <div id="formMessage" style="text-align: center; margin-top: 10px;"></div>
+        </div>
+
+    </div>
+
+    <!-- Painel de Navegação -->
+    <div data-role="panel" id="nav-panel" data-display="push" data-theme="b">
+        <ul data-role="listview">
+            <li data-icon="false"><a href="#">Olá, Admin!</a></li>
+            <li data-icon="calendar"><a href="/repo_limpo/admin/agenda.html">Agenda</a></li>
+            <li data-icon="info"><a href="/repo_limpo/admin/informacoes.html">Informações</a></li>
+            <li data-icon="file"><a href="/repo_limpo/admin/contrato.html">Contrato</a></li>
+            <li data-icon="chart"><a href="/repo_limpo/admin/graficos.html">Gráficos</a></li>
+            <li data-icon="gear"><a href="/repo_limpo/admin/mudar_senha_cliente.html">Mudar Senha Cliente</a></li>
+            <li data-icon="power"><a href="#" id="logoutBtn">Sair</a></li>
+        </ul>
+    </div>
+</div>
+
+<!-- Scripts -->
+<script src="/repo_limpo/assets/js/jquery-1.11.1.min.js"></script>
+<script src="/repo_limpo/admin/script.js"></script> 
+<script src="/repo_limpo/assets/js/jquery.mobile-1.4.5.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<!-- ***** SCRIPT DA MÁSCARA ADICIONADO AQUI ***** -->
+<script>
+// Aguarda a página da agenda ser inicializada pelo jQuery Mobile
+$(document).on('pageinit', '#agendaPage', function() {
+    const precoInput = document.getElementById('preco');
+
+    // Função para formatar o valor como moeda brasileira (R$)
+    function formatCurrency(input) {
+        if (!input) return;
+        let value = input.value;
+        // 1. Remove tudo que não for dígito
+        value = value.replace(/\D/g, ""); 
+        if (value === "") {
+            input.value = "";
+            return;
+        }
+        // 2. Remove zeros à esquerda para evitar "0700,00"
+        value = value.replace(/^0+/, ''); 
+        
+        // 3. Garante que sempre haja pelo menos 3 dígitos para os centavos
+        if (value.length < 3) {
+            value = '0'.repeat(3 - value.length) + value;
+        }
+        
+        // 4. Coloca a vírgula antes dos últimos 2 dígitos
+        value = value.replace(/(\d{1,2})$/, ',$1'); 
+        // 5. Coloca um ponto como separador de milhar
+        value = value.replace(/(\d)(?=(\d{3})+(?!\d))/g, '$1.'); 
+        
+        input.value = value;
+    }
+    
+    // 6. Adiciona o evento de 'input' para formatar enquanto o usuário digita
+    if (precoInput) {
+        precoInput.addEventListener('input', function() {
+            formatCurrency(this);
+        });
+    }
+});
+</script>
+
+</body>
+</html>
